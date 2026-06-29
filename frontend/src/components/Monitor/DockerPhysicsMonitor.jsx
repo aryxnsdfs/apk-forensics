@@ -54,7 +54,7 @@ function ThinkLine({ line }) {
 
 export default function DockerPhysicsMonitor() {
   const { telemetry, preflight, validatorRuntime, lastValidatorResult, reasoningTrace } = useSimulationState();
-  const traceEndRef = useRef(null);
+  const traceScrollRef = useRef(null);
 
   const isCritical = telemetry.containerStatus === 'critical';
   const runtime = validatorRuntime || telemetry.validator_runtime || {};
@@ -73,9 +73,10 @@ export default function DockerPhysicsMonitor() {
     cpu:  isPass ? 2 : telemetry.cpu,
   };
 
-  // Auto-scroll to bottom on new trace entries
+  // Auto-scroll the think-log to bottom (inner container only — never the sidebar)
   useEffect(() => {
-    traceEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const el = traceScrollRef.current;
+    if (el) el.scrollTop = el.scrollHeight;
   }, [reasoningTrace.length]);
 
   return (
@@ -134,7 +135,7 @@ export default function DockerPhysicsMonitor() {
           </div>
 
           {/* Scrollable think log */}
-          <div className="h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-2.5 space-y-3 font-mono">
+          <div ref={traceScrollRef} className="h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-2.5 space-y-3 font-mono">
             {reasoningTrace.length === 0 ? (
               <p className="text-[9px] text-zinc-700 italic pt-1">
                 The model's forensic reasoning will appear here as it parses each APK component and assembles the attack-chain footprint…
@@ -156,7 +157,6 @@ export default function DockerPhysicsMonitor() {
                 </div>
               ))
             )}
-            <div ref={traceEndRef} />
           </div>
         </div>
       </div>

@@ -3,11 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationDispatch, useSimulationState } from '../../store/simulationStore';
 import { ShieldAlert, Bot, Terminal, Briefcase, Users, Gauge } from 'lucide-react';
 
+const THREAT_TXT = { LOW: 'text-emerald-400', MEDIUM: 'text-amber-400', HIGH: 'text-red-400', CRITICAL: 'text-red-300' };
+
+// Parse the Chief Security Officer verdict line: "VERDICT | THREAT_X | Family | FLAG_A FLAG_B | ETA"
+function deriveVerdict(messages) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const raw = String(messages[i]?.m2m || '').trim();
+    if (/^VERDICT/i.test(raw)) {
+      const parts = raw.split('|').map((s) => s.trim());
+      const level = (parts[1] || '').replace(/THREAT[_\s-]?/i, '').toUpperCase();
+      const family = parts[2] || '';
+      const flags = (parts[3] || '').split(/\s+/).filter((f) => /^FLAG/i.test(f));
+      return { level, family, flags };
+    }
+  }
+  return null;
+}
+
 export default function EnterpriseChat() {
   const dispatch = useSimulationDispatch();
   const { messages, disagreement, scenarioContext, taskViews, queuedTaskIds, selectedTaskView, scenarioComplete, spent, budget, rewardFeed, totalReward } = useSimulationState();
   const scrollRef = useRef(null);
   const [expandedThink, setExpandedThink] = useState({});
+  const verdict = deriveVerdict(messages);
 
   const activeTask = scenarioContext?.task_id;
   const availableTasks = new Set([
@@ -228,6 +246,30 @@ export default function EnterpriseChat() {
                     <td className="py-1.5 text-zinc-500 font-medium w-28">Status</td>
                     <td className="py-1.5"><span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[9px]">RESOLVED</span></td>
                   </tr>
+                  {verdict && (
+                    <tr className="border-b border-zinc-800/50">
+                      <td className="py-1.5 text-zinc-500 font-medium">Threat Level</td>
+                      <td className="py-1.5"><span className={`font-bold font-mono ${THREAT_TXT[verdict.level] || 'text-zinc-300'}`}>{verdict.level || '—'}</span></td>
+                    </tr>
+                  )}
+                  {verdict?.family && (
+                    <tr className="border-b border-zinc-800/50">
+                      <td className="py-1.5 text-zinc-500 font-medium">Malware Family</td>
+                      <td className="py-1.5 text-zinc-200 font-mono">{verdict.family}</td>
+                    </tr>
+                  )}
+                  {verdict?.flags?.length > 0 && (
+                    <tr className="border-b border-zinc-800/50">
+                      <td className="py-1.5 text-zinc-500 font-medium align-top">Indicators Found</td>
+                      <td className="py-1.5">
+                        <div className="flex flex-wrap gap-1">
+                          {verdict.flags.map((f, i) => (
+                            <span key={i} className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-mono text-[9px]">{f}</span>
+                          ))}
+                        </div>
+                      </td>
+                    </tr>
+                  )}
                   <tr className="border-b border-zinc-800/50">
                     <td className="py-1.5 text-zinc-500 font-medium">Steps Taken</td>
                     <td className="py-1.5 text-zinc-300 font-mono">{messages.length}</td>

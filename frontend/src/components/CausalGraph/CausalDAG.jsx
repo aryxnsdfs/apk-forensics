@@ -5,66 +5,62 @@ import { useSimulationState } from '../../store/simulationStore';
 import CustomNode from './CustomNode';
 
 const nodeTypes = { custom: CustomNode };
-const COLUMN_WIDTH = 260;
-const ROW_HEIGHT = 140;
-const MAX_COLUMNS = 4;
+const COLUMN_WIDTH = 240;
+const ROW_HEIGHT = 120;
 
+// Layered DAG layout: column = causal depth (longest path from a root),
+// rows stack siblings within a depth. Disconnected nodes land in column 0.
 function buildWrappedLayout(nodes, edges) {
-  const incoming = new Map();
-  const outgoing = new Map();
-
-  nodes.forEach((node) => {
-    incoming.set(node.id, 0);
-    outgoing.set(node.id, []);
+  const indeg = new Map();
+  const adj = new Map();
+  nodes.forEach((n) => { indeg.set(n.id, 0); adj.set(n.id, []); });
+  edges.forEach((e) => {
+    if (!adj.has(e.source) || !indeg.has(e.target)) return;
+    adj.get(e.source).push(e.target);
+    indeg.set(e.target, (indeg.get(e.target) || 0) + 1);
   });
 
-  edges.forEach((edge) => {
-    if (!incoming.has(edge.target)) incoming.set(edge.target, 0);
-    incoming.set(edge.target, (incoming.get(edge.target) || 0) + 1);
-    if (!outgoing.has(edge.source)) outgoing.set(edge.source, []);
-    outgoing.get(edge.source).push(edge.target);
-  });
-
-  const queue = nodes
-    .filter((node) => (incoming.get(node.id) || 0) === 0)
-    .map((node) => node.id);
-  const orderedIds = [];
+  // Kahn topological order + longest-path depth.
+  const depth = new Map(nodes.map((n) => [n.id, 0]));
+  const work = new Map(indeg);
+  const queue = nodes.filter((n) => (indeg.get(n.id) || 0) === 0).map((n) => n.id);
+  const order = [];
   const seen = new Set();
-
   while (queue.length > 0) {
-    const current = queue.shift();
-    if (seen.has(current)) continue;
-    seen.add(current);
-    orderedIds.push(current);
-    const targets = outgoing.get(current) || [];
-    targets.forEach((target) => {
-      incoming.set(target, (incoming.get(target) || 1) - 1);
-      if ((incoming.get(target) || 0) <= 0) {
-        queue.push(target);
-      }
+    const u = queue.shift();
+    if (seen.has(u)) continue;
+    seen.add(u);
+    order.push(u);
+    (adj.get(u) || []).forEach((v) => {
+      depth.set(v, Math.max(depth.get(v) || 0, (depth.get(u) || 0) + 1));
+      work.set(v, (work.get(v) || 1) - 1);
+      if ((work.get(v) || 0) <= 0) queue.push(v);
     });
   }
+  nodes.forEach((n) => { if (!seen.has(n.id)) order.push(n.id); });
 
-  nodes.forEach((node) => {
-    if (!seen.has(node.id)) {
-      orderedIds.push(node.id);
-    }
+  // Assign a row index per depth column, then vertically center each column.
+  const rowByDepth = new Map();
+  const colRows = new Map();
+  const rawPos = new Map();
+  order.forEach((id) => {
+    const d = depth.get(id) || 0;
+    const r = rowByDepth.get(d) || 0;
+    rowByDepth.set(d, r + 1);
+    rawPos.set(id, { d, r });
+    colRows.set(d, Math.max(colRows.get(d) || 0, r + 1));
   });
+  const maxRows = Math.max(1, ...colRows.values());
 
-  const positionById = new Map();
-  orderedIds.forEach((id, index) => {
-    const col = index % MAX_COLUMNS;
-    const row = Math.floor(index / MAX_COLUMNS);
-    positionById.set(id, {
-      x: 40 + col * COLUMN_WIDTH,
-      y: 40 + row * ROW_HEIGHT,
-    });
+  return nodes.map((node) => {
+    const p = rawPos.get(node.id) || { d: 0, r: 0 };
+    const rowsInCol = colRows.get(p.d) || 1;
+    const yOffset = ((maxRows - rowsInCol) * ROW_HEIGHT) / 2; // center column
+    return {
+      ...node,
+      position: { x: 40 + p.d * COLUMN_WIDTH, y: 40 + yOffset + p.r * ROW_HEIGHT },
+    };
   });
-
-  return nodes.map((node) => ({
-    ...node,
-    position: positionById.get(node.id) || { x: 40, y: 40 },
-  }));
 }
 
 export default function CausalDAG() {
