@@ -28,9 +28,12 @@
 # ═══════════════════════════════════════════════════════════════════════════
 
 import argparse
+import inspect
 import json
 import logging
 import os
+import re
+import subprocess
 import sys
 import time
 from datetime import datetime, timedelta
@@ -66,27 +69,135 @@ GGUF_DIR = os.path.join(OUTPUT_DIR, "gguf")
 REWARD_LOG = os.path.join(OUTPUT_DIR, "grpo_reward_log.jsonl")
 
 
+def is_rank0():
+    return int(os.environ.get("RANK", "0")) == 0
+
+
+def world_size():
+    return int(os.environ.get("WORLD_SIZE", "1"))
+
+
+def maybe_relaunch_distributed(stage):
+    if stage == "export" or os.environ.get("VA_NO_TORCHRUN") == "1":
+        return
+    try:
+        import torch
+        n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
+    except Exception:
+        n_gpu = 0
+    if n_gpu <= 1 or world_size() > 1 or os.environ.get("VA_DISTRIBUTED", "1") == "0":
+        return
+
+    cmd = [
+        sys.executable, "-m", "torch.distributed.run",
+        "--standalone", f"--nproc_per_node={n_gpu}",
+        os.path.abspath(__file__), *sys.argv[1:],
+    ]
+    env = os.environ.copy()
+    env["VA_NO_TORCHRUN"] = "1"
+    log.info("Detected %d CUDA GPUs; relaunching with torchrun for distributed training.", n_gpu)
+    log.info("Command: %s", " ".join(cmd))
+    raise SystemExit(subprocess.run(cmd, env=env).returncode)
+
+
+def supported_kwargs(callable_obj, kwargs):
+    try:
+        sig = inspect.signature(callable_obj)
+    except (TypeError, ValueError):
+        return kwargs
+    if any(p.kind == inspect.Parameter.VAR_KEYWORD for p in sig.parameters.values()):
+        return kwargs
+    return {k: v for k, v in kwargs.items() if k in sig.parameters}
+
+
+def build_config(config_cls, **kwargs):
+    params = inspect.signature(config_cls).parameters
+    if "max_seq_length" in kwargs and "max_seq_length" not in params and "max_length" in params:
+        kwargs["max_length"] = kwargs.pop("max_seq_length")
+    if "eval_strategy" in kwargs and "eval_strategy" not in params and "evaluation_strategy" in params:
+        kwargs["evaluation_strategy"] = kwargs.pop("eval_strategy")
+    while True:
+        try:
+            return config_cls(**supported_kwargs(config_cls, kwargs))
+        except TypeError as e:
+            m = re.search(r"unexpected keyword argument '([^']+)'", str(e))
+            if not m or m.group(1) not in kwargs:
+                raise
+            dropped = m.group(1)
+            log.warning("%s does not support %s; dropping it for compatibility.",
+                        config_cls.__name__, dropped)
+            kwargs.pop(dropped)
+
+
+def build_trainer(trainer_cls, **kwargs):
+    params = inspect.signature(trainer_cls).parameters
+    if "tokenizer" in kwargs and "tokenizer" not in params and "processing_class" in params:
+        kwargs["processing_class"] = kwargs.pop("tokenizer")
+    while True:
+        try:
+            return trainer_cls(**supported_kwargs(trainer_cls, kwargs))
+        except TypeError as e:
+            m = re.search(r"unexpected keyword argument '([^']+)'", str(e))
+            if not m or m.group(1) not in kwargs:
+                raise
+            dropped = m.group(1)
+            log.warning("%s does not support %s; dropping it for compatibility.",
+                        trainer_cls.__name__, dropped)
+            kwargs.pop(dropped)
+
+
+def ensure_training_imports(*packages):
+    import importlib
+    missing = []
+    for pkg in packages:
+        try:
+            importlib.import_module(pkg)
+        except ModuleNotFoundError:
+            missing.append(pkg)
+    if not missing:
+        return
+    if is_rank0():
+        log.info("Installing missing training package(s): %s", ", ".join(missing))
+        subprocess.run([sys.executable, "-m", "pip", "install", "-q", *missing], check=True)
+    try:
+        import torch
+        if world_size() > 1 and torch.distributed.is_available() and torch.distributed.is_initialized():
+            torch.distributed.barrier()
+    except Exception:
+        pass
+
+
 # ── Hardware autodetect ──────────────────────────────────────────────────────
 def detect_hardware():
     import torch
     if not torch.cuda.is_available():
-        log.warning("No CUDA GPU detected — training will be extremely slow on CPU.")
-        return dict(bf16=False, fp16=False, batch=1, accum=8, gens=2, vram_gb=0, name="cpu")
-    name = torch.cuda.get_device_name(0)
-    props = torch.cuda.get_device_properties(0)
+        log.warning("No CUDA GPU detected - training will be extremely slow on CPU.")
+        return dict(bf16=False, fp16=False, batch=1, accum=8, gens=2,
+                    vram_gb=0, name="cpu", n_gpu=0)
+    local_rank = int(os.environ.get("LOCAL_RANK", "0"))
+    torch.cuda.set_device(local_rank)
+    n_gpu = torch.cuda.device_count()
+    name = torch.cuda.get_device_name(local_rank)
+    props = torch.cuda.get_device_properties(local_rank)
     total_vram = getattr(props, "total_memory", getattr(props, "total_mem", 0))
     vram_gb = total_vram / 1024**3
-    bf16 = torch.cuda.is_bf16_supported()
+    major, _minor = torch.cuda.get_device_capability(local_rank)
+    bf16 = bool(torch.cuda.is_bf16_supported() and major >= 8)
     big = vram_gb >= 70
+    per_device_batch = 4 if big else (2 if vram_gb >= 20 else 1)
+    global_batch = per_device_batch * max(1, world_size())
+    gens = 8 if big else 4
+    while gens > 1 and (gens > global_batch or global_batch % gens != 0):
+        gens -= 1
     cfg = dict(
         bf16=bf16, fp16=not bf16,
-        batch=4 if big else (2 if vram_gb >= 20 else 1),
+        batch=per_device_batch,
         accum=4 if big else 8,
-        gens=8 if big else 4,
-        vram_gb=round(vram_gb, 1), name=name,
+        gens=max(2, gens),
+        vram_gb=round(vram_gb, 1), name=name, n_gpu=n_gpu,
     )
-    log.info("GPU: %s | VRAM %.1fGB | bf16=%s | batch=%d accum=%d gens/prompt=%d",
-             name, vram_gb, bf16, cfg["batch"], cfg["accum"], cfg["gens"])
+    log.info("GPU rank %s/%s: %s | VRAM %.1fGB | bf16=%s | per-device batch=%d accum=%d gens/prompt=%d",
+             local_rank, world_size(), name, vram_gb, bf16, cfg["batch"], cfg["accum"], cfg["gens"])
     return cfg
 
 
@@ -109,8 +220,10 @@ def load_model(hw, checkpoint=None):
     from unsloth import FastLanguageModel
     src = checkpoint if checkpoint and os.path.exists(checkpoint) else DEFAULT_MODEL
     log.info("Loading model: %s", src)
+    device_map = {"": int(os.environ["LOCAL_RANK"])} if world_size() > 1 and "LOCAL_RANK" in os.environ else None
     model, tok = FastLanguageModel.from_pretrained(
         model_name=src, max_seq_length=MAX_SEQ_LEN, load_in_4bit=True, dtype=None,
+        device_map=device_map,
     )
     if not checkpoint or not os.path.exists(checkpoint):
         model = FastLanguageModel.get_peft_model(
@@ -129,7 +242,7 @@ def stage_sft(hw):
     train, ev = load_jsonl(SFT_TRAIN), load_jsonl(SFT_EVAL)
     log.info("SFT: train=%d eval=%d", len(train), len(ev))
     model, tok = load_model(hw)
-    cfg = SFTConfig(
+    cfg = build_config(SFTConfig,
         output_dir=SFT_CKPT, num_train_epochs=3,
         per_device_train_batch_size=hw["batch"], gradient_accumulation_steps=hw["accum"],
         per_device_eval_batch_size=hw["batch"], learning_rate=2e-4,
@@ -139,14 +252,16 @@ def stage_sft(hw):
         save_strategy="epoch", save_total_limit=2, report_to="none",
         optim="adamw_8bit", seed=42,
     )
-    tr = SFTTrainer(model=model, args=cfg, train_dataset=Dataset.from_list(train),
-                    eval_dataset=Dataset.from_list(ev), tokenizer=tok)
+    tr = build_trainer(SFTTrainer, model=model, args=cfg, train_dataset=Dataset.from_list(train),
+                       eval_dataset=Dataset.from_list(ev), tokenizer=tok,
+                       dataset_text_field="text", max_seq_length=MAX_SEQ_LEN)
     _run(tr, "SFT", SFT_CKPT, model, tok)
     return SFT_CKPT
 
 
 # ── Stage 2: GRPO (reuses the forensic reward from train.py) ─────────────────
 def stage_grpo(hw):
+    ensure_training_imports("mergekit")
     from datasets import Dataset
     from trl import GRPOConfig, GRPOTrainer
     from train import production_reward  # single source of truth
@@ -167,7 +282,7 @@ def stage_grpo(hw):
             pass
         return rewards
 
-    cfg = GRPOConfig(
+    cfg = build_config(GRPOConfig,
         output_dir=GRPO_CKPT, num_train_epochs=1,
         per_device_train_batch_size=hw["batch"], gradient_accumulation_steps=hw["accum"],
         learning_rate=5e-6, warmup_ratio=0.05, lr_scheduler_type="cosine",
@@ -176,9 +291,9 @@ def stage_grpo(hw):
         save_steps=200, save_total_limit=5, report_to="none",
         optim="adamw_8bit", seed=42, max_grad_norm=0.5,
     )
-    tr = GRPOTrainer(model=model, args=cfg,
-                     train_dataset=Dataset.from_list([{"prompt": d["prompt"]} for d in data]),
-                     tokenizer=tok, reward_funcs=logged_reward)
+    tr = build_trainer(GRPOTrainer, model=model, args=cfg,
+                       train_dataset=Dataset.from_list([{"prompt": d["prompt"]} for d in data]),
+                       tokenizer=tok, reward_funcs=logged_reward)
     _run(tr, "GRPO", GRPO_CKPT, model, tok)
     return GRPO_CKPT
 
@@ -191,7 +306,7 @@ def stage_dpo(hw):
     log.info("DPO: pairs=%d", len(data))
     base = GRPO_CKPT if os.path.exists(GRPO_CKPT) else (SFT_CKPT if os.path.exists(SFT_CKPT) else None)
     model, tok = load_model(hw, base)
-    cfg = DPOConfig(
+    cfg = build_config(DPOConfig,
         output_dir=DPO_CKPT, num_train_epochs=3,
         per_device_train_batch_size=hw["batch"], gradient_accumulation_steps=hw["accum"],
         learning_rate=5e-7, warmup_ratio=0.1, lr_scheduler_type="cosine",
@@ -199,13 +314,15 @@ def stage_dpo(hw):
         beta=0.1, logging_steps=5, save_strategy="epoch", save_total_limit=2,
         report_to="none", optim="adamw_8bit", seed=42,
     )
-    tr = DPOTrainer(model=model, args=cfg, train_dataset=Dataset.from_list(data), tokenizer=tok)
+    tr = build_trainer(DPOTrainer, model=model, args=cfg, train_dataset=Dataset.from_list(data), tokenizer=tok)
     _run(tr, "DPO", DPO_CKPT, model, tok)
     return DPO_CKPT
 
 
 # ── Export: merge + GGUF ─────────────────────────────────────────────────────
 def export(push_gguf=False, quants=("q4_k_m",)):
+    if not is_rank0():
+        return
     from unsloth import FastLanguageModel
     ckpt = next((c for c in (DPO_CKPT, GRPO_CKPT, SFT_CKPT) if os.path.exists(c)), None)
     if not ckpt:
@@ -239,13 +356,19 @@ def _run(trainer, name, ckpt, model, tok):
     t0 = time.time()
     log.info("%s started %s (ETA varies by GPU)", name, datetime.now().strftime("%H:%M:%S"))
     trainer.train()
-    model.save_pretrained(ckpt); tok.save_pretrained(ckpt)
-    log.info("%s complete in %.1f min → %s", name, (time.time() - t0) / 60, ckpt)
+    trainer.save_model(ckpt)
+    if trainer.is_world_process_zero():
+        tok.save_pretrained(ckpt)
+        log.info("%s complete in %.1f min -> %s", name, (time.time() - t0) / 60, ckpt)
+    if world_size() > 1 and torch.distributed.is_available() and torch.distributed.is_initialized():
+        torch.distributed.barrier()
     del trainer, model
     torch.cuda.empty_cache()
 
 
 def write_summary(stages):
+    if not is_rank0():
+        return
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     summary = {
         "model": DEFAULT_MODEL, "stages_run": stages,
@@ -256,7 +379,7 @@ def write_summary(stages):
     }
     with open(os.path.join(OUTPUT_DIR, "training_summary.json"), "w") as f:
         json.dump(summary, f, indent=2)
-    log.info("Summary → %s", os.path.join(OUTPUT_DIR, "training_summary.json"))
+    log.info("Summary -> %s", os.path.join(OUTPUT_DIR, "training_summary.json"))
 
 
 def main():
@@ -266,10 +389,12 @@ def main():
     ap.add_argument("--quants", default="q4_k_m", help="comma list, e.g. q4_k_m,q5_k_m,q8_0")
     args = ap.parse_args()
 
+    maybe_relaunch_distributed(args.stage)
+
     import torch
     log.info("=" * 64)
     log.info("  VaultAgent Cloud Training")
-    log.info("  GPU: %s", torch.cuda.get_device_name(0) if torch.cuda.is_available() else "CPU")
+    log.info("  GPUs: %s", torch.cuda.device_count() if torch.cuda.is_available() else 0)
     log.info("  Stage: %s | Output: %s", args.stage, OUTPUT_DIR)
     log.info("  Started: %s", datetime.now())
     log.info("=" * 64)
