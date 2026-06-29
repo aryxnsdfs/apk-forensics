@@ -1,14 +1,12 @@
 import { useRef, useEffect, useState } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationDispatch, useSimulationState } from '../../store/simulationStore';
-import TranslateToggle from './TranslateToggle';
 import { ShieldAlert, Bot, Terminal, Briefcase, Users, Gauge } from 'lucide-react';
 
 export default function EnterpriseChat() {
   const dispatch = useSimulationDispatch();
-  const { messages, disagreement, scenarioContext, taskViews, queuedTaskIds, selectedTaskView, scenarioComplete, spent, budget, burnRate, rewardFeed, totalReward } = useSimulationState();
+  const { messages, disagreement, scenarioContext, taskViews, queuedTaskIds, selectedTaskView, scenarioComplete, spent, budget, rewardFeed, totalReward } = useSimulationState();
   const scrollRef = useRef(null);
-  const [translateMode, setTranslateMode] = useState(false);
   const [expandedThink, setExpandedThink] = useState({});
 
   const activeTask = scenarioContext?.task_id;
@@ -97,7 +95,6 @@ export default function EnterpriseChat() {
               })}
             </div>
           )}
-          <TranslateToggle enabled={translateMode} onToggle={setTranslateMode} />
         </div>
       </div>
 
@@ -176,43 +173,15 @@ export default function EnterpriseChat() {
                     )}
                   </div>
 
-                  {/* Message Content */}
-                  <AnimatePresence mode="wait">
-                    <motion.div
-                      key={translateMode ? 'english' : 'm2m'}
-                      initial={{ opacity: 0 }}
-                      animate={{ opacity: 1 }}
-                      exit={{ opacity: 0 }}
-                      transition={{ duration: 0.15 }}
-                    >
-                      {translateMode ? (
-                        <div className="flex flex-wrap items-center gap-2">
-                           <p className="text-xs text-zinc-300 leading-relaxed">{(msg.english || '').replace(/\*\*/g, '').replace(/\*/g, '')}</p>
-                           {msg.points !== undefined && msg.points !== 0 && (
-                             <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-500'}`}>
-                                {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
-                             </span>
-                           )}
-                        </div>
-                      ) : (
-                        <div className="flex flex-wrap items-center gap-2 mt-0.5">
-                           <p className="text-xs font-mono text-emerald-400 bg-zinc-900/50 px-2 py-1 rounded inline-block">
-                             {(msg.m2m || '').replace(/\*\*/g, '').replace(/\*/g, '')}
-                           </p>
-                           {msg.points !== undefined && msg.points !== 0 && (
-                             <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-500/20 text-emerald-400 border border-emerald-500/30' : 'bg-red-500/20 text-red-500 border border-red-500/30'}`}>
-                                {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
-                             </span>
-                           )}
-                        </div>
-                      )}
-                      <div className="flex items-center gap-3 mt-1.5 pt-1 border-t border-zinc-800/40 text-[9px] font-mono text-zinc-600">
-                        <span>Budget Left: <span className="text-zinc-400">${(Number(budget || 50) - Number(spent || 0)).toFixed(3)}</span> <span className="text-emerald-600/70">(healthy)</span></span>
-                        <span>Cost Accrued: <span className="text-zinc-400">${Number(spent || 0).toFixed(3)}</span></span>
-                        <span>Burn Rate: <span className="text-zinc-400">${Number(burnRate || 2.5).toFixed(3)}/hr</span></span>
-                      </div>
-                    </motion.div>
-                  </AnimatePresence>
+                  {/* Message Content — human-readable only */}
+                  <div className="flex flex-wrap items-center gap-2">
+                    <p className="text-xs text-zinc-300 leading-relaxed">{(msg.english || '').replace(/\*\*/g, '').replace(/\*/g, '')}</p>
+                    {msg.points !== undefined && msg.points !== 0 && (
+                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-500'}`}>
+                        {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
+                      </span>
+                    )}
+                  </div>
 
                   {/* Hidden CoT Block */}
                   <AnimatePresence>

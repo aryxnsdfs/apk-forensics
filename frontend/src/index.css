@@ -140,6 +140,17 @@ body {
   filter: brightness(1.2);
 }
 
+/* ── Global readability bump — scale up tiny text everywhere (~+20%) ── */
+.text-\[8px\]  { font-size: 10px !important; }
+.text-\[9px\]  { font-size: 11px !important; }
+.text-\[10px\] { font-size: 12px !important; }
+.text-\[11px\] { font-size: 13px !important; }
+.text-\[12px\] { font-size: 14px !important; }
+.text-xs   { font-size: 0.85rem !important;  line-height: 1.15rem !important; }
+.text-sm   { font-size: 0.95rem !important;  line-height: 1.3rem  !important; }
+.text-base { font-size: 1.05rem !important; }
+.text-lg   { font-size: 1.2rem  !important; }
+
 /* ── React Flow Edge Visibility ── */
 .react-flow__edge-path {
   stroke-width: 2px !important;

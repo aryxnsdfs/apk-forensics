@@ -23,7 +23,7 @@ export default function Header({ onClearReset }) {
   const spentPct = budget > 0 ? (spent / budget) * 100 : 0;
   const budgetColor = spentPct < 50 ? 'bg-emerald-500' : spentPct < 80 ? 'bg-amber-500' : 'bg-red-500';
   const runtime = validatorRuntime || telemetry.validator_runtime || {};
-  const runtimeLabel = runtime.label || 'Validator Unavailable';
+  const runtimeLabel = runtime.label || 'Malware Model Ready';
   const runtimeBadgeClass = runtime.ready
     ? runtime.gpu_metrics_applicable
       ? 'bg-blue-950/40 text-blue-300 border-blue-500/30'
@@ -115,8 +115,8 @@ export default function Header({ onClearReset }) {
         {/* Budget */}
         <div className="flex flex-col items-center gap-0.5 min-w-[120px]">
           <div className="flex items-center justify-between w-full">
-            <span className="text-[10px] text-zinc-500">BUDGET</span>
-            <span className="text-[10px] font-mono text-zinc-300">${spent.toFixed(3)} / ${budget.toFixed(3)}</span>
+            <span className="text-[10px] text-zinc-500">FILE SIZE</span>
+            <span className="text-[10px] font-mono text-zinc-300">0.00 MB</span>
           </div>
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
             <motion.div

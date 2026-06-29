@@ -57,7 +57,7 @@ export default function BeforeAfterSplit() {
 
   const closureNote = isResolved
     ? 'Success: The incident closed with validator-backed evidence, cost tracking, and replayable execution logs.'
-    : 'Pending: Awaiting the final closure note and counterfactual summary.';
+    : 'Pending: Awaiting Chief Security Officer final report validation.';
 
   return (
     <div
@@ -66,9 +66,9 @@ export default function BeforeAfterSplit() {
     >
 
       {/* ── Phase 1: Incident Trigger ── */}
-      <Panel accent="border-red-500/20 shadow-[0_0_15px_-5px_rgba(239,68,68,0.1)]" badge="bg-red-500" title="Phase 1: Incident Trigger">
+      <Panel accent="border-red-500/20 shadow-[0_0_15px_-5px_rgba(239,68,68,0.1)]" badge="bg-red-500" title="Phase 1: Target Footprint">
         <p className="text-[11px] text-zinc-300 leading-relaxed">
-          {scenarioContext?.incident_summary || 'Waiting for the incident brief from the backend...'}
+          {scenarioContext?.incident_summary || 'Waiting for APK ingestion footprint...'}
         </p>
         <div className="flex flex-col gap-0.5 pt-2 border-t border-zinc-800/60">
           <MetricRow label="Task Context"      value={scenarioContext?.title     || '—'} valueClass="text-red-400 font-bold" />
@@ -82,9 +82,9 @@ export default function BeforeAfterSplit() {
       </Panel>
 
       {/* ── Phase 2: Validation Proof ── */}
-      <Panel accent="border-blue-500/20" badge="bg-blue-500" title="Phase 2: Validation Proof">
+      <Panel accent="border-blue-500/20" badge="bg-blue-500" title="Phase 2: Forensic Verify">
         <div className="flex flex-col gap-0.5">
-          <MetricRow label="Validator Agent" value={validator.validation_label || runtime.label || '—'} valueClass="text-blue-300" />
+          <MetricRow label="Analysis Pipeline" value={validator.validation_label || runtime.label || '—'} valueClass="text-blue-300" />
           <MetricRow label="Pass Status"     value={validator.status || telemetry.last_validator_status || 'pending'} valueClass="text-emerald-400 font-bold" />
           <MetricRow
             label="Applied Checks"
@@ -98,29 +98,29 @@ export default function BeforeAfterSplit() {
               valueClass="text-emerald-300"
             />
           ) : (
-            <MetricRow label="Sandbox Mode" value="Docker Plain-Python Workflow" valueClass="text-zinc-400" />
+            <MetricRow label="Extraction Mode" value="Pure-Python Androguard Pipeline" valueClass="text-zinc-400" />
           )}
         </div>
         <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2.5 py-2 text-[10px] text-zinc-400 leading-relaxed font-mono mt-1">
-          {validator.validator_detail || telemetry.validator_detail || runtime.detail || 'Validator proof details will appear here after execution.'}
+          {validator.validator_detail || telemetry.validator_detail || runtime.detail || 'Forensic verification indicators will populate here upon payload execution.'}
         </div>
       </Panel>
 
       {/* ── Phase 3: Incident Outcome ── */}
-      <Panel accent="border-emerald-500/20" badge="bg-emerald-500" title="Phase 3: Incident Outcome">
+      <Panel accent="border-emerald-500/20" badge="bg-emerald-500" title="Phase 3: Detected Outcome">
         <div className="flex flex-col gap-0.5">
           <MetricRow
-            label="Closure Outcome"
+            label="Analysis Verdict"
             value={closureOutcome}
             valueClass={outcomeClass}
           />
           <MetricRow
-            label="Final Resolution Cost"
-            value={counterfactual?.actual?.cost || `$${Number(spent || 0).toFixed(3)}`}
-            valueClass="text-emerald-300"
+            label="Threat Index"
+            value={isResolved ? 'CRITICAL' : 'ANALYZING'}
+            valueClass={isResolved ? 'text-red-400 font-bold' : 'text-zinc-400'}
           />
           <MetricRow
-            label="Residual SLA Window"
+            label="Model Confidence Metric"
             value={counterfactual?.actual?.sla || (telemetry.sla_remaining_seconds > 0 ? 'SAFE' : 'BREACHED')}
             valueClass={telemetry.sla_remaining_seconds > 0 || counterfactual?.actual?.sla === 'SAFE' ? 'text-emerald-400' : 'text-red-400'}
           />

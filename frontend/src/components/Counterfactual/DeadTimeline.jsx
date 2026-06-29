@@ -13,7 +13,7 @@ function TimelineCard({ title, dotClass, borderClass, bgClass, metrics, progress
         {metrics.map((metric) => (
           <div key={metric.label} className="flex items-start justify-between gap-3">
             <span className="text-[10px] text-zinc-500 shrink-0">{metric.label}</span>
-            <span className={`text-[11px] font-mono text-right break-words ${metric.valueClass}`}>
+            <span className={`min-w-0 text-[11px] font-mono text-right break-all ${metric.valueClass}`}>
               {metric.value}
             </span>
           </div>
@@ -76,7 +76,7 @@ export default function DeadTimeline() {
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
           <span className="w-1 h-3 bg-zinc-600 rounded-full" />
-          Counterfactual Analysis
+          Mitigation Strategy
         </span>
         <span className="text-[9px] font-mono text-zinc-600">
           {showPlaceholder ? 'waiting' : counterfactual ? 'live comparison ready' : 'tracking live estimate'}

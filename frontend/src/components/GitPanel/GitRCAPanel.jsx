@@ -39,7 +39,7 @@ export default function GitRCAPanel() {
               {scenarioContext?.title || 'Waiting for incident run...'}
             </p>
             <p className="px-2.5 text-zinc-500 italic">
-              {scenarioContext?.incident_summary || 'Start a backend run or bridge in python inference.py to populate the RCA stream here.'}
+              {scenarioContext?.incident_summary || 'Upload an APK or start a scan to populate the forensic RCA stream here.'}
             </p>
           </div>
           <div className="mb-4">
@@ -67,7 +67,7 @@ export default function GitRCAPanel() {
                 </table>
               </div>
             ) : (
-              <p className="px-2.5 text-zinc-600 italic">Collecting sandbox execution traces...</p>
+              <p className="px-2.5 text-zinc-600 italic">Assembling malicious attack chain footprint...</p>
             )}
           </div>
           <div>
@@ -110,14 +110,23 @@ export default function GitRCAPanel() {
               ul: ({ children }) => <ul className="list-disc pl-5 mb-3 space-y-1 text-zinc-400">{children}</ul>,
               li: ({ children }) => <li className="text-[10px]">{children}</li>,
               table: ({ children }) => (
-                <div className="my-2 overflow-x-auto rounded border border-zinc-800 bg-zinc-950/50">
+                <div className="my-2 overflow-x-hidden rounded border border-zinc-800 bg-zinc-950/50">
                   <table className="w-full border-collapse text-[8px] text-zinc-400 table-fixed">{children}</table>
                 </div>
               ),
               thead: ({ children }) => <thead className="bg-zinc-900 text-zinc-500 uppercase tracking-tighter border-b border-zinc-800">{children}</thead>,
-              th: ({ children }) => <th className="p-1 text-left font-bold">{children}</th>,
-              td: ({ children }) => <td className="p-1 border-t border-zinc-900/50 break-words">{children}</td>,
-              code: ({ children }) => <code className="bg-zinc-800 text-emerald-400 px-1 rounded text-[9px] font-mono">{children}</code>,
+              th: ({ children }) => <th className="px-2.5 py-1.5 text-left font-bold break-words align-top">{children}</th>,
+              td: ({ children }) => <td className="px-2.5 py-1.5 border-t border-zinc-900/50 break-words align-top">{children}</td>,
+              pre: ({ children }) => (
+                <pre className="my-2 p-2.5 rounded border border-zinc-800 bg-zinc-950 overflow-x-hidden whitespace-pre-wrap break-words text-[10px] leading-relaxed text-emerald-300 font-mono">
+                  {children}
+                </pre>
+              ),
+              code: ({ className, children }) => (
+                className
+                  ? <code className="font-mono text-emerald-300 whitespace-pre-wrap break-words">{children}</code>
+                  : <code className="bg-zinc-800 text-emerald-400 px-1 rounded text-[9px] font-mono break-words">{children}</code>
+              ),
             }}
           >
             {rcaDocument}

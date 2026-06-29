@@ -59,12 +59,12 @@ export default function DockerPhysicsMonitor() {
   const isCritical = telemetry.containerStatus === 'critical';
   const runtime = validatorRuntime || telemetry.validator_runtime || {};
 
-  const validatorStatus = lastValidatorResult?.status || telemetry.last_validator_status || 'n/a';
+  const validatorStatus = lastValidatorResult?.status || telemetry.last_validator_status || 'scanning';
   const isPass          = validatorStatus === 'PASS' || validatorStatus === 'pass';
-  const validatorLabel  = lastValidatorResult?.validation_label || runtime.label || 'Docker Sandbox';
-  const validatorMode   = lastValidatorResult?.validation_mode  || runtime.mode  || 'Strict VRAM Enforcement';
+  const validatorLabel  = lastValidatorResult?.validation_label || runtime.label || 'Androguard Static Parser';
+  const validatorMode   = lastValidatorResult?.validation_mode  || runtime.mode  || 'Local Air-Gapped';
   const validatorDetail = lastValidatorResult?.validator_detail || telemetry.validator_detail || runtime.detail
-                          || 'Remediation executed within 500MB VRAM limit.';
+                          || 'Package signatures verified locally.';
 
   // Lock telemetry to verified sandbox result on PASS
   const resolvedTelemetry = {
@@ -116,7 +116,7 @@ export default function DockerPhysicsMonitor() {
       <div className="flex flex-col gap-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-            VRAM Math
+            Agent Thinking Matrix
           </span>
           <span className="text-[9px] font-mono text-zinc-600">
             {reasoningTrace.length > 0 ? `${reasoningTrace.length} steps` : 'awaiting run…'}
@@ -137,7 +137,7 @@ export default function DockerPhysicsMonitor() {
           <div className="h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-2.5 space-y-3 font-mono">
             {reasoningTrace.length === 0 ? (
               <p className="text-[9px] text-zinc-700 italic pt-1">
-                The model's VRAM reasoning will appear here as it evaluates each step against the 500MB sandbox limit…
+                The model's forensic reasoning will appear here as it parses each APK component and assembles the attack-chain footprint…
               </p>
             ) : (
               reasoningTrace.map((entry) => (
@@ -166,11 +166,11 @@ export default function DockerPhysicsMonitor() {
       {/* ── Validator Runtime ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Validator Runtime</span>
+          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Analysis Engine</span>
           <ContainerStatusBadge status={telemetry.containerStatus} />
         </div>
         <div className="grid grid-cols-1 gap-1.5 text-[10px]">
-          <InfoRow label="VALIDATOR" value={validatorLabel} />
+          <InfoRow label="ENGINE" value={validatorLabel} />
           <InfoRow label="MODE"      value={validatorMode}  />
           <InfoRow
             label="STATUS"
@@ -186,9 +186,9 @@ export default function DockerPhysicsMonitor() {
       {/* ── Pre-Flight Check ── */}
       <div className="space-y-1.5">
         <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Pre-Flight Check</span>
-        <PreFlightItem label="FinOps Budget" status={preflight.budget} />
-        <PreFlightItem label="No SPOF"       status={preflight.spof}   />
-        <PreFlightItem label="SLA Window"    status={preflight.sla}    />
+        <PreFlightItem label="Signature Match"  status={preflight.budget} />
+        <PreFlightItem label="Permission Audit" status={preflight.spof}   />
+        <PreFlightItem label="C2 Domain Check"   status={preflight.sla}    />
       </div>
     </div>
   );

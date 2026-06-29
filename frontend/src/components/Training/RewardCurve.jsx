@@ -27,7 +27,7 @@ export default function RewardCurve() {
                   <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
                 </svg>
               </div>
-              <p className="text-[10px] text-zinc-600 font-mono">Chart updates from real validator reward events</p>
+              <p className="text-[10px] text-zinc-600 font-mono">Chart updates from active GRPO forensic evaluation steps.</p>
             </div>
           </div>
         ) : (

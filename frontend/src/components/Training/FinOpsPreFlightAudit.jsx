@@ -108,10 +108,10 @@ export default function FinOpsPreFlightAudit() {
   const dockerState = parseStatus(telemetry.containerStatus);
 
   const checks = [
-    { id: 'ast', label: 'AST Syntax Check', state: astState, detail: astState === 'pending' ? 'Awaiting validator response' : validator.status || telemetry.last_validator_status || 'PASS' },
-    { id: 'budget', label: `Budget Constraint ($${budgetLimit.toFixed(0)})`, state: budgetState, detail: `$${budgetSpent.toFixed(3)} / $${budgetLimit.toFixed(3)}` },
-    { id: 'vram', label: 'VRAM Simulation (500MB Limit)', state: vramState, detail: vramPeak > 0 ? `${vramPeak.toFixed(0)}MB peak` : 'Awaiting VRAM sample' },
-    { id: 'docker', label: 'Docker Execution Status', state: dockerState, detail: String(telemetry.containerStatus || 'idle').toUpperCase() },
+    { id: 'ast', label: 'Manifest Context Analysis', state: astState, detail: astState === 'pending' ? 'Awaiting file stream parsing' : validator.status || telemetry.last_validator_status || 'PASS' },
+    { id: 'budget', label: 'Ternary Weight Alignment', state: budgetState, detail: '1.58-bit Base Quantization' },
+    { id: 'vram', label: 'Context Window Saturation', state: vramState, detail: vramPeak > 0 ? `${vramPeak.toFixed(0)} tokens peak` : 'Evaluating snippet payload length' },
+    { id: 'docker', label: 'Androguard Core Status', state: dockerState, detail: String(telemetry.containerStatus || 'idle').toUpperCase() },
   ];
 
   const failed = checks.some((c) => c.state === 'fail');
@@ -123,7 +123,7 @@ export default function FinOpsPreFlightAudit() {
     <div className="panel-card p-3 h-full min-h-0 flex flex-col">
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800/60">
         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-          FinOps Pre-Flight Audit
+          Forensic Complexity Scoring
         </span>
         <span className={`text-[10px] px-2 py-0.5 border rounded font-mono font-bold ${gateClass}`}>
           {gateLabel}

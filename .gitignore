@@ -48,3 +48,6 @@ vaultagent_apks/
 # Batch / PowerShell scripts (Windows-only, not needed in Docker Space)
 *.bat
 *.ps1
+
+# local preview launch config
+frontend/.claude/
