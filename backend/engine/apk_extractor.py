@@ -25,6 +25,13 @@ logger = logging.getLogger("swarm-os.apk")
 
 # ── Androguard is optional at import time so the backend boots without it. ──
 try:
+    # Androguard logs verbosely via loguru — quiet it so our pipeline output stays clean.
+    try:
+        from loguru import logger as _loguru_logger
+        _loguru_logger.disable("androguard")
+    except Exception:
+        pass
+
     from androguard.misc import AnalyzeAPK  # type: ignore
 
     ANDROGUARD_AVAILABLE = True
