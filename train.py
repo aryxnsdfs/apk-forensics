@@ -79,7 +79,9 @@ def get_vram_info():
     if torch.cuda.is_available():
         allocated = torch.cuda.memory_allocated() / 1024**3
         reserved = torch.cuda.memory_reserved() / 1024**3
-        total = torch.cuda.get_device_properties(0).total_mem / 1024**3
+        props = torch.cuda.get_device_properties(0)
+        total_vram = getattr(props, "total_memory", getattr(props, "total_mem", 0))
+        total = total_vram / 1024**3
         return f"{allocated:.1f}GB / {reserved:.1f}GB reserved / {total:.1f}GB total"
     return "CUDA not available"
 

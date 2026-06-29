@@ -73,7 +73,9 @@ def detect_hardware():
         log.warning("No CUDA GPU detected — training will be extremely slow on CPU.")
         return dict(bf16=False, fp16=False, batch=1, accum=8, gens=2, vram_gb=0, name="cpu")
     name = torch.cuda.get_device_name(0)
-    vram_gb = torch.cuda.get_device_properties(0).total_memory / 1024**3
+    props = torch.cuda.get_device_properties(0)
+    total_vram = getattr(props, "total_memory", getattr(props, "total_mem", 0))
+    vram_gb = total_vram / 1024**3
     bf16 = torch.cuda.is_bf16_supported()
     big = vram_gb >= 70
     cfg = dict(
