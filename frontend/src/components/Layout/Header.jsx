@@ -3,15 +3,12 @@ import { motion } from 'framer-motion';
 import { getApiBase } from '../../hooks/useSimulation';
 
 const AGENT_DISPLAY = {
-  COMMANDER: 'Commander',
-  DETECTIVE: 'Detective',
-  CODER: 'Coder',
-  MANAGER: 'Manager',
+  COMMANDER: 'Chief Security Officer',
+  DETECTIVE: 'Static Analyst',
+  CODER: 'Reverse Engineer',
+  THREAT_INTEL: 'Threat Intel',
+  MANAGER: 'Coordinator',
   EVALUATOR: 'Validator',
-  DBA_AGENT: 'Data Agent',
-  SRE_AGENT: 'Reliability',
-  SECURITY_AGENT: 'Security',
-  COMPLIANCE_AGENT: 'Compliance',
 };
 
 export default function Header({ onClearReset }) {
@@ -50,13 +47,29 @@ export default function Header({ onClearReset }) {
     <header className="flex items-center justify-between px-4 py-2 bg-zinc-900 border-b border-zinc-800 h-14 shrink-0">
       {/* ── Left: Branding ── */}
       <div className="flex items-center gap-3">
-        <div className="flex items-center gap-2">
-          <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-blue-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold">
-            F
-          </div>
+        <div className="flex items-center gap-2.5">
+          {/* Professional forensic shield logo */}
+          <svg width="30" height="30" viewBox="0 0 48 48" fill="none" aria-label="logo">
+            <defs>
+              <linearGradient id="hdrShield" x1="24" y1="3" x2="24" y2="45" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#1e293b" />
+                <stop offset="1" stopColor="#0f172a" />
+              </linearGradient>
+              <linearGradient id="hdrScan" x1="14" y1="20" x2="34" y2="30" gradientUnits="userSpaceOnUse">
+                <stop offset="0" stopColor="#22d3ee" />
+                <stop offset="1" stopColor="#0ea5e9" />
+              </linearGradient>
+            </defs>
+            <path d="M24 3 8 8.5v11.2C8 31 14.7 40.4 24 45c9.3-4.6 16-14 16-25.3V8.5L24 3Z"
+                  fill="url(#hdrShield)" stroke="#334155" strokeWidth="1.5" />
+            <path d="M14 18.5h20M14 24h20M14 29.5h20" stroke="#1e3a52" strokeWidth="1" />
+            <circle cx="22" cy="22" r="7" fill="none" stroke="url(#hdrScan)" strokeWidth="2.4" />
+            <path d="M27 27l5 5" stroke="url(#hdrScan)" strokeWidth="2.6" strokeLinecap="round" />
+            <circle cx="22" cy="22" r="2.4" fill="#f43f5e" />
+          </svg>
           <div>
-            <h1 className="text-sm font-semibold text-zinc-100 leading-none">FrontierLabs</h1>
-            <p className="text-[10px] text-zinc-500 leading-none mt-0.5">Swarm-OS v1.0</p>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.2em] text-zinc-300 leading-none">Forensic Console</p>
+            <p className="text-[9px] text-zinc-500 leading-none mt-1">Offline · Air-gapped</p>
           </div>
         </div>
 
@@ -67,6 +80,7 @@ export default function Header({ onClearReset }) {
               COMMANDER: 'bg-blue-900/40 text-blue-400 border-blue-500/30',
               DETECTIVE: 'bg-amber-900/40 text-amber-400 border-amber-500/30',
               CODER: 'bg-emerald-900/40 text-emerald-400 border-emerald-500/30',
+              THREAT_INTEL: 'bg-red-900/40 text-red-400 border-red-500/30',
               MANAGER: 'bg-purple-900/40 text-purple-400 border-purple-500/30',
               EVALUATOR: 'bg-pink-900/40 text-pink-400 border-pink-500/30',
               DBA_AGENT: 'bg-emerald-900/40 text-emerald-300 border-emerald-500/30',
@@ -127,9 +141,9 @@ export default function Header({ onClearReset }) {
           {runtimeLabel}
         </span>
         <div className="flex flex-col items-end">
-          <span className="text-[10px] text-zinc-500">PRIMARY</span>
-          <span className="text-[10px] font-mono text-blue-400">
-            SwarmOS-Llama-3.1-8B-GRPO
+          <span className="text-[10px] text-zinc-500">ENGINE</span>
+          <span className="text-[10px] font-mono text-cyan-400">
+            VaultAgent-Llama-3.1-8B-GRPO
           </span>
           <span className="text-[9px] text-zinc-600">4-bit QLoRA · GGUF · Local</span>
         </div>
