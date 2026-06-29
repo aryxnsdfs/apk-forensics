@@ -1,9 +1,10 @@
 import { useState, useRef } from 'react';
 import { useSimulation } from '../../hooks/useSimulation';
-import { useSimulationState, getApiBase } from '../../store/simulationStore';
+import { useSimulationState, useSimulationDispatch, getApiBase } from '../../store/simulationStore';
 
 export default function CommandPrompt() {
   const { isRunning, scenarioComplete } = useSimulationState();
+  const dispatch = useSimulationDispatch();
   const { stop } = useSimulation();
   const [uploading, setUploading] = useState(false);
   const fileInputRef = useRef(null);
@@ -11,6 +12,7 @@ export default function CommandPrompt() {
   const handleApkUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    dispatch({ type: 'SET_FILE_SIZE', payload: file.size / (1024 * 1024) });
     setUploading(true);
     try {
       const form = new FormData();

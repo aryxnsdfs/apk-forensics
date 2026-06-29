@@ -29,7 +29,7 @@ function deriveThreat(messages) {
 
 export default function Header({ onClearReset }) {
   const dispatch = useSimulationDispatch();
-  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages } = useSimulationState();
+  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages, fileSizeMb } = useSimulationState();
   const threat = deriveThreat(messages || []);
 
   const slaMin = Math.floor(slaRemaining / 60);
@@ -148,7 +148,7 @@ export default function Header({ onClearReset }) {
         <div className="flex flex-col items-center gap-0.5 min-w-[120px]">
           <div className="flex items-center justify-between w-full">
             <span className="text-[10px] text-zinc-500">FILE SIZE</span>
-            <span className="text-[10px] font-mono text-zinc-300">0.00 MB</span>
+            <span className="text-[10px] font-mono text-zinc-300">{(Number(fileSizeMb) || 0).toFixed(2)} MB</span>
           </div>
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
             <motion.div

@@ -93,6 +93,7 @@ const initialState = {
   activeAgents: [],
   mockMode: true,
   reasoningTrace: [],
+  fileSizeMb: 0,
 };
 
 function resetState(currentState) {
@@ -100,6 +101,7 @@ function resetState(currentState) {
     ...initialState,
     modelConfig: currentState?.modelConfig || initialState.modelConfig,
     mockMode: currentState?.mockMode ?? initialState.mockMode,
+    fileSizeMb: currentState?.fileSizeMb ?? initialState.fileSizeMb,
   };
 }
 
@@ -126,6 +128,8 @@ function persistCurrentTaskView(state, explicitTaskId = null) {
 
 function simulationReducer(state, action) {
   switch (action.type) {
+    case "SET_FILE_SIZE":
+      return { ...state, fileSizeMb: Number(action.payload) || 0 };
     case "START_SIMULATION": {
       const preservedViews = { ...state.taskViews };
       const curTaskId = state.scenarioContext?.task_id;
