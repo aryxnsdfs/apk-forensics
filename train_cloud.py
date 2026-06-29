@@ -85,6 +85,8 @@ def maybe_relaunch_distributed(stage):
         n_gpu = torch.cuda.device_count() if torch.cuda.is_available() else 0
     except Exception:
         n_gpu = 0
+    if n_gpu == 1 and is_rank0():
+        log.info("Only 1 CUDA GPU is visible to Python; enable Kaggle GPU T4 x2 and restart the session to use both.")
     if n_gpu <= 1 or world_size() > 1 or os.environ.get("VA_DISTRIBUTED", "1") == "0":
         return
 
@@ -237,11 +239,11 @@ def load_model(hw, checkpoint=None):
 
 # ── Stage 1: SFT ─────────────────────────────────────────────────────────────
 def stage_sft(hw):
-    from datasets import Dataset
-    from trl import SFTConfig, SFTTrainer
     train, ev = load_jsonl(SFT_TRAIN), load_jsonl(SFT_EVAL)
     log.info("SFT: train=%d eval=%d", len(train), len(ev))
     model, tok = load_model(hw)
+    from datasets import Dataset
+    from trl import SFTConfig, SFTTrainer
     cfg = build_config(SFTConfig,
         output_dir=SFT_CKPT, num_train_epochs=3,
         per_device_train_batch_size=hw["batch"], gradient_accumulation_steps=hw["accum"],
@@ -262,15 +264,14 @@ def stage_sft(hw):
 # ── Stage 2: GRPO (reuses the forensic reward from train.py) ─────────────────
 def stage_grpo(hw):
     ensure_training_imports("mergekit")
-    from datasets import Dataset
-    from trl import GRPOConfig, GRPOTrainer
-    from train import production_reward  # single source of truth
-
     os.makedirs(OUTPUT_DIR, exist_ok=True)
     data = load_jsonl(GRPO_DATA)
     log.info("GRPO: prompts=%d gens/prompt=%d", len(data), hw["gens"])
     base = SFT_CKPT if os.path.exists(SFT_CKPT) else None
     model, tok = load_model(hw, base)
+    from datasets import Dataset
+    from trl import GRPOConfig, GRPOTrainer
+    from train import production_reward  # single source of truth
 
     def logged_reward(completions, prompts, **kw):
         rewards = production_reward(completions, prompts, **kw)
@@ -300,12 +301,12 @@ def stage_grpo(hw):
 
 # ── Stage 3: DPO ─────────────────────────────────────────────────────────────
 def stage_dpo(hw):
-    from datasets import Dataset
-    from trl import DPOConfig, DPOTrainer
     data = load_jsonl(DPO_DATA)
     log.info("DPO: pairs=%d", len(data))
     base = GRPO_CKPT if os.path.exists(GRPO_CKPT) else (SFT_CKPT if os.path.exists(SFT_CKPT) else None)
     model, tok = load_model(hw, base)
+    from datasets import Dataset
+    from trl import DPOConfig, DPOTrainer
     cfg = build_config(DPOConfig,
         output_dir=DPO_CKPT, num_train_epochs=3,
         per_device_train_batch_size=hw["batch"], gradient_accumulation_steps=hw["accum"],
