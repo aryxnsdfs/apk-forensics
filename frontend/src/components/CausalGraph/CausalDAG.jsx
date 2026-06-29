@@ -139,7 +139,7 @@ export default function CausalDAG() {
             fitViewOptions={{ padding: 0.1, minZoom: 0.35, maxZoom: 1.5 }}
             minZoom={0.3}
             maxZoom={2.0}
-            nodesDraggable={false}
+            nodesDraggable
             panOnDrag
             proOptions={{ hideAttribution: true }}
           >

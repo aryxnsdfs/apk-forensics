@@ -11,9 +11,26 @@ const AGENT_DISPLAY = {
   EVALUATOR: 'Validator',
 };
 
+const THREAT_STYLE = {
+  LOW:      { label: 'THREAT LOW · low danger',        cls: 'bg-emerald-950/50 text-emerald-300 border-emerald-500/40' },
+  MEDIUM:   { label: 'THREAT MEDIUM · moderate danger', cls: 'bg-amber-950/50 text-amber-300 border-amber-500/50' },
+  HIGH:     { label: 'THREAT HIGH · high danger',       cls: 'bg-red-950/50 text-red-300 border-red-500/50' },
+  CRITICAL: { label: 'THREAT CRITICAL · severe danger', cls: 'bg-red-900/70 text-red-200 border-red-500/70' },
+};
+
+function deriveThreat(messages) {
+  for (let i = messages.length - 1; i >= 0; i -= 1) {
+    const text = `${messages[i]?.m2m || ''} ${messages[i]?.english || ''}`;
+    const m = text.match(/THREAT[_\s-]?(LOW|MEDIUM|HIGH|CRITICAL)/i);
+    if (m) return THREAT_STYLE[m[1].toUpperCase()];
+  }
+  return null;
+}
+
 export default function Header({ onClearReset }) {
   const dispatch = useSimulationDispatch();
-  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime } = useSimulationState();
+  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages } = useSimulationState();
+  const threat = deriveThreat(messages || []);
 
   const slaMin = Math.floor(slaRemaining / 60);
   const slaSec = Math.floor(slaRemaining % 60);
@@ -111,6 +128,21 @@ export default function Header({ onClearReset }) {
             {String(slaMin).padStart(2, '0')}:{String(slaSec).padStart(2, '0')}
           </motion.span>
         </div>
+
+        {/* Threat level — shown when a verdict is detected */}
+        {threat && (
+          <motion.span
+            initial={{ opacity: 0, scale: 0.9 }}
+            animate={{ opacity: 1, scale: 1 }}
+            className={`flex items-center gap-1 text-[10px] font-mono font-bold px-2 py-0.5 rounded border ${threat.cls}`}
+          >
+            <svg className="w-3 h-3" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.6">
+              <path d="M8 1.5 15 14H1L8 1.5Z" />
+              <path d="M8 6v3.5M8 11.5v0.5" strokeLinecap="round" />
+            </svg>
+            {threat.label}
+          </motion.span>
+        )}
 
         {/* Budget */}
         <div className="flex flex-col items-center gap-0.5 min-w-[120px]">
