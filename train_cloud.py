@@ -352,6 +352,28 @@ def export(push_gguf=False, quants=("q4_k_m",)):
             log.warning("HF push failed: %s", e)
 
 
+def _push_ckpt_to_hub(ckpt, name):
+    """Push a freshly-saved checkpoint folder (adapters + tokenizer) to HF Hub
+    IMMEDIATELY after the local save, so a later disk-full export or a stopped
+    Kaggle session can't lose the run. Adapters are small (~100-300MB) so this
+    is fast and never hits the disk limit. Non-fatal: a push failure only warns,
+    it never breaks training. Enable by setting VA_HF_REPO + HF_TOKEN."""
+    repo = os.getenv("VA_HF_REPO")
+    token = os.getenv("HF_TOKEN")
+    if not (repo and token):
+        log.info("HF auto-push skipped for %s (set VA_HF_REPO + HF_TOKEN to enable)", name)
+        return
+    try:
+        from huggingface_hub import HfApi
+        api = HfApi(token=token)
+        api.create_repo(repo, exist_ok=True, private=True)
+        subdir = os.path.basename(ckpt.rstrip("/"))  # e.g. stage2-grpo
+        api.upload_folder(folder_path=ckpt, repo_id=repo, path_in_repo=subdir)
+        log.info("HF auto-push OK -> https://huggingface.co/%s/tree/main/%s", repo, subdir)
+    except Exception as e:
+        log.warning("HF auto-push failed (%s) — local checkpoint still at %s", e, ckpt)
+
+
 def _run(trainer, name, ckpt, model, tok):
     import torch
     t0 = time.time()
@@ -361,6 +383,9 @@ def _run(trainer, name, ckpt, model, tok):
     if trainer.is_world_process_zero():
         tok.save_pretrained(ckpt)
         log.info("%s complete in %.1f min -> %s", name, (time.time() - t0) / 60, ckpt)
+        # Push to Hub right after local save — BEFORE any disk-hungry export —
+        # so the run is safe even if the session dies or the disk fills later.
+        _push_ckpt_to_hub(ckpt, name)
     if world_size() > 1 and torch.distributed.is_available() and torch.distributed.is_initialized():
         torch.distributed.barrier()
     del trainer, model
