@@ -94,6 +94,10 @@ const initialState = {
   mockMode: true,
   reasoningTrace: [],
   fileSizeMb: 0,
+  fileSizeBytes: 0,
+  apkFileCount: 0,
+  apkPermissionCount: 0,
+  apkPackage: null,
 };
 
 function resetState(currentState) {
@@ -130,6 +134,18 @@ function simulationReducer(state, action) {
   switch (action.type) {
     case "SET_FILE_SIZE":
       return { ...state, fileSizeMb: Number(action.payload) || 0 };
+    case "SET_APK_METADATA": {
+      const p = action.payload || {};
+      const bytes = Number(p.size_bytes) || 0;
+      return {
+        ...state,
+        fileSizeBytes: bytes,
+        fileSizeMb: bytes / (1024 * 1024),
+        apkFileCount: Number(p.file_count) || 0,
+        apkPermissionCount: Number(p.permission_count) || 0,
+        apkPackage: p.package || state.apkPackage,
+      };
+    }
     case "START_SIMULATION": {
       const preservedViews = { ...state.taskViews };
       const curTaskId = state.scenarioContext?.task_id;
@@ -761,6 +777,8 @@ export function SimulationProvider({ children }) {
             // Dispatch to reducer
             if (msg.type === "new_causal_event") {
               dispatch({ type: "ADD_CAUSAL_EVENT", payload: msg.payload });
+            } else if (msg.type === "apk_metadata") {
+              dispatch({ type: "SET_APK_METADATA", payload: msg.payload });
             } else if (msg.type === "telemetry") {
               dispatch({ type: "UPDATE_TELEMETRY", payload: msg.payload });
             } else if (msg.type === "preflight") {

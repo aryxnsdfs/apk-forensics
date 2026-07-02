@@ -3191,6 +3191,13 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     extractor = ApkExtractor(apk_path)
     metadata = extractor.parse()
     seed = apk_features.analyze(metadata)
+    await broadcast({"type": "apk_metadata", "payload": {
+        "size_bytes": metadata.get("apk_size_bytes", 0),
+        "size_kb": metadata.get("apk_size_kb", 0),
+        "file_count": metadata.get("file_count", 0),
+        "permission_count": len(metadata.get("permissions", [])),
+        "package": metadata.get("package"),
+    }})
     await broadcast({"type": "telemetry", "payload": _apk_telemetry(metadata, seed)})
 
     pkg = metadata.get("package") or display_name
@@ -3412,6 +3419,7 @@ async def broadcast(message: dict):
     replayable_types = {
         "tasks_queued",
         "scenario_started",
+        "apk_metadata",
         "chat",
         "code_result",
         "new_causal_event",

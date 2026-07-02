@@ -29,8 +29,16 @@ function deriveThreat(messages) {
 
 export default function Header({ onClearReset }) {
   const dispatch = useSimulationDispatch();
-  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages, fileSizeMb } = useSimulationState();
+  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages, fileSizeBytes } = useSimulationState();
   const threat = deriveThreat(messages || []);
+
+  // Adaptive size label so small APKs don't read "0.00 MB".
+  const sizeLabel = (() => {
+    const b = Number(fileSizeBytes) || 0;
+    if (b <= 0) return '0 KB';
+    if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
+    return `${(b / (1024 * 1024)).toFixed(2)} MB`;
+  })();
 
   const slaMin = Math.floor(slaRemaining / 60);
   const slaSec = Math.floor(slaRemaining % 60);
@@ -148,7 +156,7 @@ export default function Header({ onClearReset }) {
         <div className="flex flex-col items-center gap-0.5 min-w-[120px]">
           <div className="flex items-center justify-between w-full">
             <span className="text-[10px] text-zinc-500">FILE SIZE</span>
-            <span className="text-[10px] font-mono text-zinc-300">{(Number(fileSizeMb) || 0).toFixed(2)} MB</span>
+            <span className="text-[10px] font-mono text-zinc-300">{sizeLabel}</span>
           </div>
           <div className="w-full h-1 bg-zinc-800 rounded-full overflow-hidden">
             <motion.div
