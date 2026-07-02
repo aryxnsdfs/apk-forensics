@@ -48,11 +48,14 @@ export default function FinOpsPreFlightAudit() {
   const {
     rewardFeed,
     telemetry,
-    preflight,
-    spent,
-    budget,
     lastValidatorResult,
     chosenRun,
+    verdict,
+    apkPackage,
+    apkPermissionCount,
+    apkFileCount,
+    fileSizeBytes,
+    isRunning,
   } = useSimulationState();
 
   const [activeStepIdx, setActiveStepIdx] = useState(-1);
@@ -84,46 +87,64 @@ export default function FinOpsPreFlightAudit() {
   }, [coderSignal]);
 
   const validator = lastValidatorResult || chosenRun || {};
-  const astState = parseStatus(validator.status || telemetry.last_validator_status);
-  const rawBudgetLimit = Number(telemetry.budget_limit_usd);
-  const fallbackBudget = Number(budget);
-  const budgetLimit = Number.isFinite(rawBudgetLimit) && rawBudgetLimit > 0
-    ? rawBudgetLimit
-    : Number.isFinite(fallbackBudget) && fallbackBudget > 0
-      ? fallbackBudget
-      : 50;
-  const budgetSpent = Number.isFinite(Number(telemetry.cost_accrued_usd))
-    ? Number(telemetry.cost_accrued_usd)
-    : Number(spent || 0);
-  const budgetState = toCheckState(
-    (preflight?.budget !== false) && budgetSpent <= budgetLimit
-  );
-  const vramPeak = Number(
-    validator.vram_peak_mb ??
-      telemetry.vram_peak_mb ??
-      telemetry.vram ??
-      0
-  );
-  const vramState = vramPeak > 0 ? toCheckState(vramPeak <= 500) : 'pending';
-  const dockerState = parseStatus(telemetry.containerStatus);
+  const checksApplied = Array.isArray(validator.checks_applied) ? validator.checks_applied : [];
+  const validatorPass = parseStatus(validator.status) === 'pass';
+  const hasVerdict = Boolean(verdict);
+
+  const extracted = Boolean(apkPackage) || Number(fileSizeBytes) > 0;
+  const permCount = Number(apkPermissionCount) || 0;
+  const fileCount = Number(apkFileCount) || 0;
+  // telemetry.network carries the count of URLs + IPs harvested from the DEX.
+  const netCount = Number(telemetry.network) || 0;
+  const sizeKb = (Number(fileSizeBytes) || 0) / 1024;
 
   const checks = [
-    { id: 'ast', label: 'Manifest Context Analysis', state: astState, detail: astState === 'pending' ? 'Awaiting file stream parsing' : validator.status || telemetry.last_validator_status || 'PASS' },
-    { id: 'budget', label: 'Ternary Weight Alignment', state: budgetState, detail: '1.58-bit Base Quantization' },
-    { id: 'vram', label: 'Context Window Saturation', state: vramState, detail: vramPeak > 0 ? `${vramPeak.toFixed(0)} tokens peak` : 'Evaluating snippet payload length' },
-    { id: 'docker', label: 'Androguard Core Status', state: dockerState, detail: String(telemetry.containerStatus || 'idle').toUpperCase() },
+    {
+      id: 'extract',
+      label: 'APK Extraction (Androguard)',
+      state: extracted ? 'pass' : 'pending',
+      detail: extracted ? `${fileCount} files · ${sizeKb.toFixed(1)} KB` : 'Awaiting APK stream',
+    },
+    {
+      id: 'manifest',
+      label: 'Manifest & Permission Audit',
+      state: extracted ? 'pass' : 'pending',
+      detail: permCount > 0 ? `${permCount} permission(s) parsed` : 'Parsing AndroidManifest.xml',
+    },
+    {
+      id: 'components',
+      label: 'Exported Component Scan',
+      state: checksApplied.includes('Exported-component scan') ? 'pass' : (extracted ? 'pass' : 'pending'),
+      detail: checksApplied.includes('Exported-component scan') ? 'Attack surface enumerated' : 'Scanning components',
+    },
+    {
+      id: 'threat',
+      label: 'Threat Scoring',
+      state: hasVerdict ? 'pass' : 'pending',
+      detail: hasVerdict
+        ? `${verdict.threat_score}/100 · ${String(verdict.threat_level || '').replace(/^THREAT_/, '')}`
+        : 'Awaiting agent verdict',
+    },
+    {
+      id: 'c2',
+      label: 'Network / C2 Indicators',
+      state: hasVerdict ? 'pass' : 'pending',
+      detail: netCount > 0
+        ? `${netCount} network indicator(s)`
+        : (hasVerdict ? 'No hardcoded endpoints' : 'Harvesting DEX strings'),
+    },
   ];
 
   const failed = checks.some((c) => c.state === 'fail');
-  const passed = checks.every((c) => c.state === 'pass');
-  const gateLabel = failed ? 'BLOCKED' : passed ? 'CLEARED' : 'PENDING';
+  const passed = hasVerdict && validatorPass;
+  const gateLabel = failed ? 'BLOCKED' : passed ? 'CLEARED' : (isRunning ? 'SCANNING' : 'PENDING');
   const gateClass = failed ? 'text-red-400 border-red-500/40' : passed ? 'text-emerald-400 border-emerald-500/40' : 'text-zinc-400 border-zinc-700';
 
   return (
     <div className="panel-card p-3 h-full min-h-0 flex flex-col">
       <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800/60">
         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
-          Forensic Complexity Scoring
+          Forensic Pipeline Checks
         </span>
         <span className={`text-[10px] px-2 py-0.5 border rounded font-mono font-bold ${gateClass}`}>
           {gateLabel}
