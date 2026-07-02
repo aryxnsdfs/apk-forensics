@@ -831,7 +831,7 @@ export function SimulationProvider({ children }) {
                   type: "ADD_REWARD",
                   payload: {
                     agent: msg.payload.agent,
-                    target: "STEP",
+                    target: msg.payload.reward_target || "Analysis step",
                     value: msg.payload.points,
                   },
                 });

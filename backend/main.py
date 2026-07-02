@@ -3235,8 +3235,8 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "english": static_english,
         "think": static_text,
         "points": 0.10,
+        "reward_target": "Static triage",
     }})
-    await broadcast({"type": "reward", "payload": {"agent": "DETECTIVE", "target": "Static triage", "value": 0.10}})
     for combo in seed.get("suspicious_combos", []):
         await _record_causal_event(f"combo_{combo}", combo, "error",
                                    "Suspicious permission combination", parent_id="apk_root")
@@ -3267,8 +3267,8 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "english": rev_english,
         "think": rev_text,
         "points": 0.20,
+        "reward_target": "Reverse engineering",
     }})
-    await broadcast({"type": "reward", "payload": {"agent": "CODER", "target": "Reverse engineering", "value": 0.20}})
     for ev in seed.get("evidence", []):
         await _record_causal_event(f"ev_{ev['flag']}", ev["flag"], "escalation",
                                    ev["detail"], parent_id="apk_root")
@@ -3299,8 +3299,8 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "english": json.dumps(verdict),
         "think": cso_text,
         "points": 0.25,
+        "reward_target": "Verdict + RCA",
     }})
-    await broadcast({"type": "reward", "payload": {"agent": "COMMANDER", "target": "Verdict + RCA", "value": 0.25}})
     await _record_causal_event("verdict", f"{verdict['threat_level']}: {verdict['malware_family']}",
                                "resolution", verdict["rca"], parent_id="apk_root")
 

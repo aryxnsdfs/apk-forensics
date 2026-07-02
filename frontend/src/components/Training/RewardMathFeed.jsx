@@ -3,17 +3,29 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationState } from '../../store/simulationStore';
 
 const AGENT_COLORS = {
-  MANAGER:  'text-violet-400',
-  SRE:      'text-sky-400',
-  SRE_AGENT:'text-sky-400',
-  CODER:    'text-amber-400',
-  ENGINEER: 'text-amber-400',
-  DETECTIVE:'text-orange-400',
+  COMMANDER: 'text-blue-400',
+  DETECTIVE: 'text-amber-400',
+  CODER:     'text-emerald-400',
+  THREAT_INTEL: 'text-red-400',
 };
 
+const AGENT_LABELS = {
+  COMMANDER: 'Chief Security Officer',
+  DETECTIVE: 'Static Analyst',
+  CODER:     'Reverse Engineer',
+  THREAT_INTEL: 'Threat Intel',
+};
+
+function agentKey(agent) {
+  return String(agent || '').toUpperCase();
+}
+
 function agentColor(agent) {
-  const key = String(agent || '').toUpperCase().split('_')[0];
-  return AGENT_COLORS[agent?.toUpperCase()] || AGENT_COLORS[key] || 'text-zinc-300';
+  return AGENT_COLORS[agentKey(agent)] || 'text-zinc-300';
+}
+
+function agentLabel(agent) {
+  return AGENT_LABELS[agentKey(agent)] || String(agent || '');
 }
 
 export default function RewardMathFeed() {
@@ -54,8 +66,8 @@ export default function RewardMathFeed() {
                 <span className="text-zinc-700 shrink-0 select-none mt-0.5">↳</span>
                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                    <span className="min-w-0 text-[11px] font-mono uppercase tracking-wide leading-snug">
-                      <span className={`font-semibold ${agentColor(entry.agent)}`}>{entry.agent}</span>
+                    <span className="min-w-0 text-[11px] font-mono tracking-wide leading-snug">
+                      <span className={`font-semibold ${agentColor(entry.agent)}`}>{agentLabel(entry.agent)}</span>
                       <span className="text-zinc-600 font-normal"> ▸ </span>
                       <span className="text-zinc-400 font-normal break-words">{entry.target}</span>
                     </span>
