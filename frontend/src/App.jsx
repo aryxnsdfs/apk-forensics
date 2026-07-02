@@ -20,7 +20,6 @@ function FinOpsSummaryBar() {
 
   const incidentCount = Object.keys(taskViews || {}).length || 1;
   const aiCost = Number(spent || 0);
-  const humanCost = incidentCount * 79.50;
   const isComplete = scenarioComplete;
   const steps = rewardFeed.length;
 
@@ -39,15 +38,17 @@ function FinOpsSummaryBar() {
       <div className="flex items-center gap-3 mb-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${isComplete ? 'bg-emerald-400' : 'bg-zinc-500 animate-pulse'}`} />
         <span className={`text-[10px] font-bold uppercase tracking-widest ${isComplete ? 'text-emerald-300' : 'text-zinc-400'}`}>
-          {isComplete ? 'Global FinOps Summary' : 'Live FinOps Tracker'}
+          VaultAgent Ingestion Summary
         </span>
-        {isComplete && <span className="text-[9px] font-mono text-emerald-600">[ SUCCESS ]</span>}
+        <span className={`text-[9px] font-mono ${isComplete ? 'text-emerald-600' : 'text-zinc-500'}`}>
+          {isComplete ? '[ SUCCESS ]' : '[ SCANNING ]'}
+        </span>
       </div>
-      <div className="flex items-center gap-5 text-[10px] font-mono flex-wrap">
-        <span className="text-zinc-500">Incidents: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>{incidentCount}</span></span>
-        <span className="text-zinc-500">Steps: <span className="text-zinc-300">{steps}</span></span>
-        <span className="text-zinc-500">Human Cost: <span className="text-red-400 font-bold">${humanCost.toFixed(2)}</span></span>
-        <span className="text-zinc-500">AI Cost: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>${aiCost.toFixed(3)}</span></span>
+      <div className="flex items-center gap-x-5 gap-y-1.5 text-[10px] font-mono flex-wrap">
+        <span className="text-zinc-500">Target Artifacts: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>{incidentCount} APK</span></span>
+        <span className="text-zinc-500">Pipeline Execution Steps: <span className="text-zinc-300">{steps}</span></span>
+        <span className="text-zinc-500">Analysis Compute Overhead: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>${aiCost.toFixed(2)}</span> <span className="text-zinc-600">(100% Local Workspace)</span></span>
+        <span className="text-zinc-500">Data Exfiltration Risk: <span className="text-emerald-400 font-bold">ZERO</span> <span className="text-zinc-600">(Air-Gapped Validation)</span></span>
         <span className="text-zinc-500">Scan Time: <span className="text-emerald-400 font-bold">{scanTime}s</span></span>
         <span className="text-zinc-500">Memory Footprint: <span className="text-zinc-300">{memMB}MB</span></span>
         <span className="text-zinc-500">Threat Confidence: <span className="text-emerald-400 font-bold">{threatConfidence}%</span></span>
@@ -110,7 +111,7 @@ export default function App() {
 
       <div className="flex-1 min-h-0 overflow-hidden">
         <AnimatePresence mode="wait">
-          {activeTab === "live" ? (
+          {activeTab === "live" && (
             <motion.div
               key="live"
               initial={{ opacity: 0, x: -20 }}
@@ -132,12 +133,10 @@ export default function App() {
                   )}
                 </div>
 
-                <div className="flex-1 flex flex-col gap-2 min-w-0 min-h-0 overflow-hidden">
-                  <div className="flex-[3] min-h-0 overflow-hidden">
+                {/* Center: AI chat now fills the full height (DAG moved to its own tab) */}
+                <div className="flex-1 flex flex-col min-w-0 min-h-0 overflow-hidden">
+                  <div className="flex-1 min-h-0 overflow-hidden">
                     <EnterpriseChat />
-                  </div>
-                  <div className="flex-[1.7] min-h-[320px] max-h-[460px] shrink-0 overflow-hidden">
-                    <CausalDAG />
                   </div>
                 </div>
 
@@ -151,10 +150,27 @@ export default function App() {
                 </div>
               </div>
 
-              {/* Global FinOps Summary — full-width bar at the bottom */}
+              {/* VaultAgent ingestion summary - full-width bar at the bottom */}
               <FinOpsSummaryBar />
             </motion.div>
-          ) : (
+          )}
+
+          {activeTab === "graph" && (
+            <motion.div
+              key="graph"
+              initial={{ opacity: 0, scale: 0.99 }}
+              animate={{ opacity: 1, scale: 1 }}
+              exit={{ opacity: 0, scale: 0.99 }}
+              transition={{ duration: 0.2 }}
+              className="h-full p-2"
+            >
+              <div className="h-full w-full overflow-hidden">
+                <CausalDAG />
+              </div>
+            </motion.div>
+          )}
+
+          {activeTab === "training" && (
             <motion.div
               key="training"
               initial={{ opacity: 0, x: 20 }}

@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 
 const TABS = [
   { id: 'live', label: 'Live Environment' },
+  { id: 'graph', label: 'Attack Graph' },
   { id: 'training', label: 'Execution Evidence' },
 ];
 
