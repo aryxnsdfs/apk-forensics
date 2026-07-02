@@ -456,11 +456,15 @@ OOM_POLICY_VIOLATIONS = (
 
 
 def _truncate(text: str, limit: int = 120) -> str:
-    """Collapse whitespace and trim long model output for UI-safe details."""
+    """Collapse whitespace and trim long text for UI, cutting on a word boundary."""
     collapsed = " ".join((text or "").split())
     if len(collapsed) <= limit:
         return collapsed
-    return f"{collapsed[:limit - 1]}…"
+    cut = collapsed[:limit]
+    space = cut.rfind(" ")
+    if space > limit * 0.6:  # avoid chopping a word in half
+        cut = cut[:space]
+    return cut.rstrip(" ,.;:") + "…"
 
 
 def _extract_vram_limit(prompt: str, default: str = "500m") -> str:
@@ -3292,7 +3296,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     }})
     await broadcast({"type": "reward", "payload": {"agent": "COMMANDER", "target": "Verdict + RCA", "value": 0.25}})
     await _record_causal_event("verdict", f"{verdict['threat_level']}: {verdict['malware_family']}",
-                               "resolution", verdict["rca"][:80], parent_id="apk_root")
+                               "resolution", verdict["rca"], parent_id="apk_root")
 
     # RCA document (reuses the existing markdown engine + appends verdict JSON)
     rca_md = causal_engine.generate_rca()

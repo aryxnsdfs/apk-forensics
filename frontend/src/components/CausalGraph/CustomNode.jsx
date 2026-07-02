@@ -14,34 +14,36 @@ export default function CustomNode({ data }) {
 
   return (
     <div
-      className="px-3 py-2 rounded-lg border min-w-[160px] max-w-[220px]"
+      className="px-3 py-2.5 rounded-lg border w-[240px]"
       style={{
         backgroundColor: '#18181b',
         borderColor: color + '60',
         boxShadow: `0 0 8px ${color}15`,
       }}
     >
-      <Handle type="target" position={Position.Left} className="!bg-zinc-600 !w-2 !h-2 !border-0" />
-      <div className="flex items-center gap-1.5 mb-1">
+      <Handle type="target" position={Position.Top} className="!bg-zinc-600 !w-2 !h-2 !border-0" />
+      <div className="flex items-start gap-1.5">
         <span
-          className="text-[8px] font-bold font-mono px-1 py-0.5 rounded"
+          className="shrink-0 text-[8px] font-bold font-mono px-1 py-0.5 rounded mt-0.5"
           style={{ backgroundColor: style.bg, color: style.border, border: `1px solid ${style.border}40` }}
         >
           {style.symbol}
         </span>
-        <span className="text-[11px] font-semibold text-zinc-200 leading-tight">{label}</span>
+        <span className="flex-1 min-w-0 text-[11px] font-semibold text-zinc-200 leading-snug break-words">
+          {label}
+        </span>
         {data.points !== undefined && (
-           <span className={`ml-auto font-mono text-[9px] font-bold ${data.points > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
-              {data.points > 0 ? '+' : ''}{data.points.toFixed(2)}
-           </span>
+          <span className={`shrink-0 mt-0.5 font-mono text-[9px] font-bold ${data.points > 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+            {data.points > 0 ? '+' : ''}{data.points.toFixed(2)}
+          </span>
         )}
       </div>
       {detail && (
-        <p className="text-[9px] font-mono leading-tight mt-1" style={{ color: color || '#a1a1aa' }}>
+        <p className="text-[9px] font-mono leading-snug mt-1.5 break-words" style={{ color: (color || '#a1a1aa') + 'cc' }}>
           {detail.replace(/\*\*/g, '').replace(/\*/g, '')}
         </p>
       )}
-      <Handle type="source" position={Position.Right} className="!bg-zinc-600 !w-2 !h-2 !border-0" />
+      <Handle type="source" position={Position.Bottom} className="!bg-zinc-600 !w-2 !h-2 !border-0" />
     </div>
   );
 }
