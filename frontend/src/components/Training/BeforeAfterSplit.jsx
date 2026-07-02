@@ -35,7 +35,19 @@ export default function BeforeAfterSplit() {
     scenarioComplete,
     isRunning,
     spent,
+    verdict,
   } = useSimulationState();
+
+  const THREAT_CLR = {
+    THREAT_BENIGN: 'text-emerald-400 font-bold',
+    THREAT_LOW: 'text-emerald-400 font-bold',
+    THREAT_MEDIUM: 'text-amber-400 font-bold',
+    THREAT_HIGH: 'text-red-400 font-bold',
+  };
+  const threatLevel = verdict?.threat_level || null;
+  const threatIndex = threatLevel ? threatLevel.replace(/^THREAT_/, '') : (isRunning ? 'ANALYZING' : '—');
+  const threatClass = THREAT_CLR[threatLevel] || 'text-zinc-400';
+  const confidence = verdict?.threat_score !== undefined ? `${verdict.threat_score}/100` : '—';
 
   const runtime = telemetry.validator_runtime || scenarioContext?.validator_runtime || {};
   const validator = lastValidatorResult || chosenRun || {};
@@ -116,13 +128,18 @@ export default function BeforeAfterSplit() {
           />
           <MetricRow
             label="Threat Index"
-            value={isResolved ? 'CRITICAL' : 'ANALYZING'}
-            valueClass={isResolved ? 'text-red-400 font-bold' : 'text-zinc-400'}
+            value={threatIndex}
+            valueClass={threatClass}
           />
           <MetricRow
-            label="Model Confidence Metric"
-            value={counterfactual?.actual?.sla || (telemetry.sla_remaining_seconds > 0 ? 'SAFE' : 'BREACHED')}
-            valueClass={telemetry.sla_remaining_seconds > 0 || counterfactual?.actual?.sla === 'SAFE' ? 'text-emerald-400' : 'text-red-400'}
+            label="Malware Family"
+            value={verdict?.malware_family || '—'}
+            valueClass="text-zinc-200"
+          />
+          <MetricRow
+            label="Threat Score"
+            value={confidence}
+            valueClass="text-amber-300 font-bold"
           />
         </div>
         <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-2 text-[10px] text-zinc-300 leading-relaxed italic mt-1">

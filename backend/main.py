@@ -3189,6 +3189,9 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     await broadcast({"type": "scenario_started", "payload": {
         "task_id": task_id, "title": f"APK: {display_name}",
         "objective": "Static malware forensic analysis", "incident_type": "malware",
+        "incident_summary": f"Offline static forensic analysis of {display_name}. "
+                            "Parsing manifest, permissions, components, and smali via the "
+                            "air-gapped Androguard pipeline.",
     }})
 
     # ── Extract ──────────────────────────────────────────────────────────
@@ -3297,6 +3300,26 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     await broadcast({"type": "reward", "payload": {"agent": "COMMANDER", "target": "Verdict + RCA", "value": 0.25}})
     await _record_causal_event("verdict", f"{verdict['threat_level']}: {verdict['malware_family']}",
                                "resolution", verdict["rca"], parent_id="apk_root")
+
+    # Forensic verification result — populates the Execution Evidence panels.
+    await broadcast({"type": "code_result", "payload": {
+        "agent_role": "COMMANDER",
+        "status": "PASS",
+        "gpu_metrics_applicable": False,
+        "validation_label": "Androguard Static Analysis",
+        "checks_applied": [
+            "Manifest parse",
+            "Permission audit",
+            "Exported-component scan",
+            "Smali review",
+            "Threat scoring",
+        ],
+        "validator_detail": (
+            f"Static analysis complete: {verdict['threat_level']} "
+            f"({verdict['threat_score']}/100), family {verdict['malware_family']}, "
+            f"{len(verdict['indicators'])} indicator(s)."
+        ),
+    }})
 
     # RCA document (reuses the existing markdown engine + appends verdict JSON)
     rca_md = causal_engine.generate_rca()

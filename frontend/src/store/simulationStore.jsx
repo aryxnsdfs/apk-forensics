@@ -93,6 +93,7 @@ const initialState = {
   activeAgents: [],
   mockMode: true,
   reasoningTrace: [],
+  verdict: null,
   fileSizeMb: 0,
   fileSizeBytes: 0,
   apkFileCount: 0,
@@ -706,6 +707,7 @@ function simulationReducer(state, action) {
         ...state,
         scenarioComplete: true,
         isRunning: false,
+        verdict: action.payload?.verdict || state.verdict,
         trainingPhase: state.trainingPhase === 3 ? 3 : 2,
       });
     case "SWITCH_MODEL":
@@ -816,7 +818,7 @@ export function SimulationProvider({ children }) {
             } else if (msg.type === "counterfactual") {
               dispatch({ type: "SET_COUNTERFACTUAL", payload: msg.payload });
             } else if (msg.type === "scenario_complete") {
-              dispatch({ type: "COMPLETE_SCENARIO" });
+              dispatch({ type: "COMPLETE_SCENARIO", payload: msg.payload });
             } else if (msg.type === "scenario_cleared") {
               dispatch({ type: "CLEAR_SIMULATION" });
             } else if (msg.type === "chat") {
