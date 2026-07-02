@@ -3220,20 +3220,24 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Code to review: {', '.join(seed.get('code_requests', [])) or 'none'}."
     )
     static_text = await _stage_llm_or_stub("DETECTIVE", _static_prompt(metadata, seed), static_stub)
+    static_reqs = [c.rsplit('.', 1)[-1] for c in seed.get('code_requests', [])]
+    # Main line: short + simple. Full breakdown goes to the REASONING panel.
     static_english = (
-        f"Parsed the manifest for {pkg}. "
-        f"Dangerous permissions: {', '.join(metadata.get('permissions_dangerous', [])) or 'none'}. "
-        f"Suspicious combinations: {', '.join(seed.get('suspicious_combos', [])) or 'none'}. "
-        f"{seed.get('exported_component_count', 0)} exported component(s) flagged. "
-        f"Requesting code review of: "
-        f"{', '.join(c.rsplit('.', 1)[-1] for c in seed.get('code_requests', [])) or 'none'}."
+        "Suspicious permission profile detected. "
+        f"Requesting code review of {', '.join(static_reqs) or 'the flagged components'}."
     )
+    static_think = " · ".join([
+        f"Dangerous permissions: {', '.join(metadata.get('permissions_dangerous', [])) or 'none'}",
+        f"Suspicious combos: {', '.join(seed.get('suspicious_combos', [])) or 'none'}",
+        f"Exported components: {seed.get('exported_component_count', 0)}",
+        f"Code requested: {', '.join(static_reqs) or 'none'}",
+    ])
     await broadcast({"type": "chat", "payload": {
         "agent": "DETECTIVE",
         "m2m": "STATIC | " + (" ".join(seed.get("suspicious_combos", [])) or "NO_COMBO") +
-               " | REQ_CODE:" + (",".join(c.rsplit('.', 1)[-1] for c in seed.get("code_requests", [])) or "none"),
+               " | REQ_CODE:" + (",".join(static_reqs) or "none"),
         "english": static_english,
-        "think": static_text,
+        "think": static_think,
         "points": 0.10,
         "reward_target": "Static triage",
     }})
@@ -3257,15 +3261,20 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     rev_details = ". ".join(
         e["detail"].rstrip(". ") for e in seed.get("evidence", []) if e["flag"] in rev_flag_set
     )
+    # Main line: short verdict. Evidence detail goes to REASONING.
     rev_english = (
-        f"Reviewed the requested code. Confirmed indicators: {', '.join(rev_flags) or 'none'}. "
-        + (rev_details + "." if rev_details else "No malicious behavior confirmed in the reviewed code.")
+        f"Confirmed malicious behavior: {', '.join(rev_flags)}."
+        if rev_flags else "No malicious behavior confirmed in the reviewed code."
     )
+    rev_think = " · ".join(filter(None, [
+        f"Flags: {', '.join(rev_flags) or 'none'}",
+        f"Evidence: {rev_details or 'none'}",
+    ]))
     await broadcast({"type": "chat", "payload": {
         "agent": "CODER",
         "m2m": "REVERSE | " + (" ".join(rev_flags) or "NO_FLAG"),
         "english": rev_english,
-        "think": rev_text,
+        "think": rev_think,
         "points": 0.20,
         "reward_target": "Reverse engineering",
     }})
@@ -3291,13 +3300,19 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     )
     cso_text = await _stage_llm_or_stub("COMMANDER", _verdict_prompt(metadata, seed), cso_stub)
     # english carries the authoritative verdict JSON so the UI renders its clean
-    # structured card (not the model's messy prose, which stays in `think`).
+    # structured card. REASONING gets a concise summary, not messy model prose.
+    cso_think = " · ".join([
+        f"Threat {verdict['threat_level'].replace('THREAT_', '')} ({verdict['threat_score']}/100)",
+        f"Family {verdict['malware_family']}",
+        f"Indicators: {', '.join(verdict['indicators']) or 'none'}",
+        f"Evidence: {'; '.join(verdict['evidence']) or 'none'}",
+    ])
     await broadcast({"type": "chat", "payload": {
         "agent": "COMMANDER",
         "m2m": f"VERDICT | {verdict['threat_level']} | {verdict['malware_family']} | "
                f"{' '.join(verdict['indicators']) or 'NO_FLAGS'} | {verdict['eta']}",
         "english": json.dumps(verdict),
-        "think": cso_text,
+        "think": cso_think,
         "points": 0.25,
         "reward_target": "Verdict + RCA",
     }})
