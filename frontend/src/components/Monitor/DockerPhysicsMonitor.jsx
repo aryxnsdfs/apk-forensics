@@ -31,6 +31,121 @@ const TAG_COLOURS = {
   '[DECISION]':   'text-emerald-400',
 };
 
+function extractTraceJson(text) {
+  const raw = String(text || '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+  const start = raw.indexOf('{');
+  const end = raw.lastIndexOf('}');
+  if (start === -1 || end <= start) return { before: raw, after: '', json: null };
+
+  try {
+    return {
+      before: raw.slice(0, start).replace(/\bJSON:\s*$/i, '').trim(),
+      after: raw.slice(end + 1).trim(),
+      json: JSON.parse(raw.slice(start, end + 1)),
+    };
+  } catch {
+    return { before: raw, after: '', json: null };
+  }
+}
+
+function traceTokenClass(token) {
+  if (/^THREAT_(HIGH|CRITICAL)/i.test(token)) return 'border-red-500/30 bg-red-500/10 text-red-300';
+  if (/^THREAT_MEDIUM/i.test(token)) return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
+  if (/^FLAG_/i.test(token)) return 'border-red-500/20 bg-red-500/10 text-red-300';
+  if (/SMS|INTERNET|READ_|RECEIVE_/i.test(token)) return 'border-sky-500/20 bg-sky-500/10 text-sky-300';
+  return 'border-zinc-800 bg-zinc-950 text-zinc-400';
+}
+
+function TraceProtocol({ text }) {
+  const parts = String(text || '').split('|').map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return null;
+
+  return (
+    <div className="flex flex-wrap gap-1">
+      <span className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[8px] font-bold text-zinc-200">
+        {parts[0]}
+      </span>
+      {parts.slice(1, 8).map((part, index) => (
+        <span key={`${part}-${index}`} className={`rounded border px-1 py-0.5 text-[8px] ${traceTokenClass(part)}`}>
+          {part}
+        </span>
+      ))}
+    </div>
+  );
+}
+
+function TraceJsonSummary({ data }) {
+  const indicators = data.indicators || data.evidence || [];
+  const mitigations = Array.isArray(data.mitigation) ? data.mitigation : [];
+
+  return (
+    <div className="mt-1.5 rounded border border-zinc-800 bg-zinc-950/70 overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-zinc-800/60">
+        {data.threat_level && (
+          <div className="bg-[#0d0d0d] px-1.5 py-1">
+            <span className="block text-[8px] text-zinc-600 uppercase">Threat</span>
+            <span className="text-[9px] font-bold text-amber-300">{String(data.threat_level).replace('THREAT_', '')}</span>
+          </div>
+        )}
+        {data.threat_score !== undefined && (
+          <div className="bg-[#0d0d0d] px-1.5 py-1">
+            <span className="block text-[8px] text-zinc-600 uppercase">Score</span>
+            <span className="text-[9px] font-bold text-emerald-300">{data.threat_score}</span>
+          </div>
+        )}
+      </div>
+      {indicators.slice(0, 3).map((item, index) => (
+        <div key={index} className="border-t border-zinc-800 px-1.5 py-1">
+          <span className="text-[8px] font-bold text-red-300">{typeof item === 'string' ? item : item.flag || `FINDING_${index + 1}`}</span>
+          {typeof item !== 'string' && (
+            <p className="text-[9px] leading-snug text-zinc-400 break-words">{item.detail || item.where || String(item)}</p>
+          )}
+        </div>
+      ))}
+      {data.rca && (
+        <div className="border-t border-zinc-800 px-1.5 py-1">
+          <span className="text-[8px] font-bold text-zinc-500">RCA</span>
+          <p className="text-[9px] leading-snug text-zinc-400 break-words">{data.rca}</p>
+        </div>
+      )}
+      {mitigations.length > 0 && (
+        <div className="border-t border-zinc-800 px-1.5 py-1">
+          <span className="text-[8px] font-bold text-zinc-500">MITIGATION</span>
+          {mitigations.slice(0, 3).map((item, index) => (
+            <p key={index} className="text-[9px] leading-snug text-zinc-400 break-words">{index + 1}. {item}</p>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function TraceEntryBody({ text }) {
+  const { before, after, json } = extractTraceJson(text);
+  if (json) {
+    const afterTokens = after.split(/\s+/).filter((token) => /^(FLAG_|THREAT_|INTERNET|READ_|RECEIVE_|SMS)/i.test(token));
+    return (
+      <div className="space-y-1">
+        <TraceProtocol text={before} />
+        <TraceJsonSummary data={json} />
+        {afterTokens.length > 0 && (
+          <div className="flex flex-wrap gap-1">
+            {afterTokens.slice(0, 8).map((token, index) => (
+              <span key={`${token}-${index}`} className={`rounded border px-1 py-0.5 text-[8px] ${traceTokenClass(token)}`}>
+                {token}
+              </span>
+            ))}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  return text.split('\n').map((line, i) => (
+    <ThinkLine key={i} line={line} />
+  ));
+}
+
 /** Render a single line of a think block with tag colouring */
 function ThinkLine({ line }) {
   const trimmed = line.trimStart();
@@ -53,7 +168,10 @@ function ThinkLine({ line }) {
 }
 
 export default function DockerPhysicsMonitor() {
-  const { telemetry, preflight, validatorRuntime, lastValidatorResult, reasoningTrace } = useSimulationState();
+  const {
+    telemetry, preflight, validatorRuntime, lastValidatorResult, reasoningTrace,
+    verdict, apkFileCount, apkPermissionCount, fileSizeBytes,
+  } = useSimulationState();
   const traceScrollRef = useRef(null);
 
   const isCritical = telemetry.containerStatus === 'critical';
@@ -66,12 +184,27 @@ export default function DockerPhysicsMonitor() {
   const validatorDetail = lastValidatorResult?.validator_detail || telemetry.validator_detail || runtime.detail
                           || 'Package signatures verified locally.';
 
-  // Lock telemetry to verified sandbox result on PASS
-  const resolvedTelemetry = {
-    ...telemetry,
-    vram: isPass ? (lastValidatorResult?.vram_peak_mb || 295) : telemetry.vram,
-    cpu:  isPass ? 2 : telemetry.cpu,
-  };
+  // ── Real APK forensic metrics (from the live pipeline) ──
+  const sizeBytes = Number(fileSizeBytes) || 0;
+  const sizeLabel = sizeBytes <= 0 ? '—'
+    : sizeBytes < 1024 * 1024 ? `${(sizeBytes / 1024).toFixed(1)} KB`
+    : `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
+  const fileCount = Number(apkFileCount) || 0;
+  const permCount = Number(apkPermissionCount) || 0;
+  const netCount = Number(telemetry.network) || 0;
+  const threatScore = verdict?.threat_score ?? null;
+  const threatLevel = verdict?.threat_level || null;
+  const threatBar =
+    threatLevel === 'THREAT_HIGH' ? { bar: 'bg-red-500', text: 'text-red-400' }
+    : threatLevel === 'THREAT_MEDIUM' ? { bar: 'bg-amber-500', text: 'text-amber-400' }
+    : { bar: 'bg-emerald-500', text: 'text-emerald-400' };
+
+  const forensicMetrics = [
+    { label: 'APK Size', value: sizeLabel },
+    { label: 'Extracted Files', value: fileCount || '—' },
+    { label: 'Permissions', value: permCount || '—' },
+    { label: 'Network Indicators', value: netCount || 0 },
+  ];
 
   // Auto-scroll the think-log to bottom (inner container only — never the sidebar)
   useEffect(() => {
@@ -82,33 +215,39 @@ export default function DockerPhysicsMonitor() {
   return (
     <div className={`flex flex-col gap-3 panel-card p-3 transition-all ${isCritical ? 'gauge-warning' : ''}`}>
 
-      {/* ── Live Sandbox Telemetry ── */}
+      {/* ── APK Forensic Metrics ── */}
       <div className="space-y-2.5">
         <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-          Live Sandbox Telemetry
+          APK Forensic Metrics
         </span>
-        {GAUGES.map((gauge) => {
-          const value  = typeof resolvedTelemetry[gauge.key] === 'number' ? resolvedTelemetry[gauge.key] : 0;
-          const pct    = Math.min((value / gauge.max) * 100, 100);
-          const colors = getGaugeColor(value, gauge.thresholds);
-          return (
-            <div key={gauge.key} className="space-y-1">
-              <div className="flex items-center justify-between">
-                <span className="text-[10px] text-zinc-500 font-mono">{gauge.label}</span>
-                <span className={`text-[10px] font-mono font-bold ${colors.text}`}>
-                  {value.toFixed(0)}{gauge.unit}
-                </span>
-              </div>
-              <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
-                <motion.div
-                  className={`h-full ${colors.bar} rounded-full`}
-                  animate={{ width: `${pct}%` }}
-                  transition={{ duration: 0.5, ease: 'easeOut' }}
-                />
-              </div>
+
+        {/* Threat score gauge */}
+        <div className="space-y-1">
+          <div className="flex items-center justify-between">
+            <span className="text-[10px] text-zinc-500 font-mono">THREAT SCORE</span>
+            <span className={`text-[10px] font-mono font-bold ${threatBar.text}`}>
+              {threatScore === null ? '—' : `${threatScore}/100`}
+              {threatLevel ? ` · ${threatLevel.replace('THREAT_', '')}` : ''}
+            </span>
+          </div>
+          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+            <motion.div
+              className={`h-full ${threatBar.bar} rounded-full`}
+              animate={{ width: `${Math.min(Number(threatScore) || 0, 100)}%` }}
+              transition={{ duration: 0.5, ease: 'easeOut' }}
+            />
+          </div>
+        </div>
+
+        {/* Metric rows */}
+        <div className="grid grid-cols-2 gap-1.5 pt-0.5">
+          {forensicMetrics.map((m) => (
+            <div key={m.label} className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+              <span className="block text-[8px] text-zinc-600 uppercase tracking-wide">{m.label}</span>
+              <span className="text-[11px] font-mono font-bold text-zinc-200">{m.value}</span>
             </div>
-          );
-        })}
+          ))}
+        </div>
       </div>
 
       <div className="h-px bg-zinc-800" />
@@ -150,10 +289,7 @@ export default function DockerPhysicsMonitor() {
                       {entry.agent}
                     </span>
                   </div>
-                  {/* Render each line of the think block */}
-                  {entry.text.split('\n').map((line, i) => (
-                    <ThinkLine key={i} line={line} />
-                  ))}
+                  <TraceEntryBody text={entry.text} />
                 </div>
               ))
             )}

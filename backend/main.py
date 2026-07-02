@@ -3253,10 +3253,13 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Flags: {', '.join(rev_flags) or 'none'}."
     )
     rev_text = await _stage_llm_or_stub("CODER", _reverse_prompt(metadata, seed, snippets), rev_stub)
-    rev_details = " ".join(e["detail"] for e in seed.get("evidence", []))
+    rev_flag_set = set(rev_flags)
+    rev_details = ". ".join(
+        e["detail"].rstrip(". ") for e in seed.get("evidence", []) if e["flag"] in rev_flag_set
+    )
     rev_english = (
         f"Reviewed the requested code. Confirmed indicators: {', '.join(rev_flags) or 'none'}. "
-        + (rev_details if rev_details else "No malicious behavior confirmed in the reviewed code.")
+        + (rev_details + "." if rev_details else "No malicious behavior confirmed in the reviewed code.")
     )
     await broadcast({"type": "chat", "payload": {
         "agent": "CODER",
@@ -3390,8 +3393,8 @@ def _build_mitigation(flags: list) -> list:
 def _build_rca_text(metadata: dict, seed: dict) -> str:
     if not seed.get("flags"):
         return "No malicious permission/behavior combination detected. Treated as benign."
-    parts = [e["detail"] for e in seed.get("evidence", [])]
-    return "Root cause: " + " ".join(parts) if parts else "Suspicious permission profile detected."
+    parts = [e["detail"].rstrip(". ") for e in seed.get("evidence", [])]
+    return ("Root cause: " + ". ".join(parts) + ".") if parts else "Suspicious permission profile detected."
 
 
 @app.post("/api/analyze")
