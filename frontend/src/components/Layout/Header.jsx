@@ -29,8 +29,15 @@ function deriveThreat(messages) {
 
 export default function Header({ onClearReset }) {
   const dispatch = useSimulationDispatch();
-  const { slaRemaining, spent, budget, activeAgents, telemetry, validatorRuntime, messages, fileSizeBytes } = useSimulationState();
+  const { spent, budget, activeAgents, telemetry, validatorRuntime, messages, fileSizeBytes, isRunning, scenarioComplete } = useSimulationState();
   const threat = deriveThreat(messages || []);
+
+  // Scan status replaces the old (irrelevant) SLA timer.
+  const scan = scenarioComplete
+    ? { label: 'COMPLETE', cls: 'text-emerald-400', dot: 'bg-emerald-500', pulse: false }
+    : isRunning
+    ? { label: 'SCANNING', cls: 'text-amber-400', dot: 'bg-amber-500', pulse: true }
+    : { label: 'IDLE', cls: 'text-zinc-500', dot: 'bg-zinc-600', pulse: false };
 
   // Adaptive size label so small APKs don't read "0.00 MB".
   const sizeLabel = (() => {
@@ -39,11 +46,6 @@ export default function Header({ onClearReset }) {
     if (b < 1024 * 1024) return `${(b / 1024).toFixed(1)} KB`;
     return `${(b / (1024 * 1024)).toFixed(2)} MB`;
   })();
-
-  const slaMin = Math.floor(slaRemaining / 60);
-  const slaSec = Math.floor(slaRemaining % 60);
-  const slaColor = slaRemaining > 300 ? 'text-emerald-400' : slaRemaining > 60 ? 'text-amber-400' : 'text-red-500';
-  const slaUrgent = slaRemaining <= 60;
 
   const spentPct = budget > 0 ? (spent / budget) * 100 : 0;
   const budgetColor = spentPct < 50 ? 'bg-emerald-500' : spentPct < 80 ? 'bg-amber-500' : 'bg-red-500';
@@ -123,18 +125,15 @@ export default function Header({ onClearReset }) {
         </div>
       </div>
 
-      {/* ── Center: SLA Timer + Budget ── */}
+      {/* ── Center: Scan status + Threat + File size ── */}
       <div className="flex items-center gap-6">
-        {/* SLA Timer */}
+        {/* Scan status */}
         <div className="flex items-center gap-2">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">SLA</span>
-          <motion.span
-            className={`font-mono text-lg font-bold ${slaColor}`}
-            animate={slaUrgent ? { scale: [1, 1.05, 1] } : {}}
-            transition={{ repeat: Infinity, duration: 1 }}
-          >
-            {String(slaMin).padStart(2, '0')}:{String(slaSec).padStart(2, '0')}
-          </motion.span>
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wider">SCAN</span>
+          <span className={`flex items-center gap-1.5 font-mono text-sm font-bold ${scan.cls}`}>
+            <span className={`w-2 h-2 rounded-full ${scan.dot} ${scan.pulse ? 'animate-pulse' : ''}`} />
+            {scan.label}
+          </span>
         </div>
 
         {/* Threat level — shown when a verdict is detected */}

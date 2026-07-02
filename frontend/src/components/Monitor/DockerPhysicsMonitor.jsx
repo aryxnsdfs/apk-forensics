@@ -1,4 +1,3 @@
-import { useEffect, useRef } from 'react';
 import { motion } from 'framer-motion';
 import { useSimulationState } from '../../store/simulationStore';
 
@@ -169,10 +168,9 @@ function ThinkLine({ line }) {
 
 export default function DockerPhysicsMonitor() {
   const {
-    telemetry, preflight, validatorRuntime, lastValidatorResult, reasoningTrace,
+    telemetry, validatorRuntime, lastValidatorResult,
     verdict, apkFileCount, apkPermissionCount, fileSizeBytes,
   } = useSimulationState();
-  const traceScrollRef = useRef(null);
 
   const isCritical = telemetry.containerStatus === 'critical';
   const runtime = validatorRuntime || telemetry.validator_runtime || {};
@@ -205,12 +203,6 @@ export default function DockerPhysicsMonitor() {
     { label: 'Permissions', value: permCount || '—' },
     { label: 'Network Indicators', value: netCount || 0 },
   ];
-
-  // Auto-scroll the think-log to bottom (inner container only — never the sidebar)
-  useEffect(() => {
-    const el = traceScrollRef.current;
-    if (el) el.scrollTop = el.scrollHeight;
-  }, [reasoningTrace.length]);
 
   return (
     <div className={`flex flex-col gap-3 panel-card p-3 transition-all ${isCritical ? 'gauge-warning' : ''}`}>
@@ -252,58 +244,14 @@ export default function DockerPhysicsMonitor() {
 
       <div className="h-px bg-zinc-800" />
 
-      {/* ── VRAM Reasoning Trace (think stream) ── */}
-      <div className="flex flex-col gap-1.5">
-        <div className="flex items-center justify-between">
-          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-            Agent Thinking Matrix
-          </span>
-          <span className="text-[9px] font-mono text-zinc-600">
-            {reasoningTrace.length > 0 ? `${reasoningTrace.length} steps` : 'awaiting run…'}
-          </span>
-        </div>
-
-        {/* Terminal window */}
-        <div className="rounded-md border border-zinc-800 bg-[#0d0d0d] overflow-hidden">
-          {/* Chrome bar — no live badge, neutral */}
-          <div className="flex items-center gap-1.5 px-2.5 py-1.5 bg-zinc-900/80 border-b border-zinc-800">
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-            <span className="w-1.5 h-1.5 rounded-full bg-zinc-700" />
-            <span className="ml-2 text-[9px] font-mono text-zinc-600">&lt;think&gt; stream</span>
-          </div>
-
-          {/* Scrollable think log */}
-          <div ref={traceScrollRef} className="h-[210px] overflow-y-auto scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent p-2.5 space-y-3 font-mono">
-            {reasoningTrace.length === 0 ? (
-              <p className="text-[9px] text-zinc-700 italic pt-1">
-                The model's forensic reasoning will appear here as it parses each APK component and assembles the attack-chain footprint…
-              </p>
-            ) : (
-              reasoningTrace.map((entry) => (
-                <div key={entry.id} className="space-y-0.5">
-                  {/* Entry header: timestamp + agent */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="text-[8px] text-zinc-700">{entry.ts}</span>
-                    <span className="text-[8px] font-bold text-zinc-600 uppercase tracking-widest">
-                      {entry.agent}
-                    </span>
-                  </div>
-                  <TraceEntryBody text={entry.text} />
-                </div>
-              ))
-            )}
-          </div>
-        </div>
-      </div>
-
-      <div className="h-px bg-zinc-800" />
-
-      {/* ── Validator Runtime ── */}
+      {/* ── Analysis Engine ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Analysis Engine</span>
-          <ContainerStatusBadge status={telemetry.containerStatus} />
+          <div className="flex items-center gap-1.5">
+            <div className={`w-1.5 h-1.5 rounded-full ${isPass ? 'bg-emerald-500' : 'bg-amber-500 status-dot-live'}`} />
+            <span className="text-[9px] font-mono text-zinc-500">{isPass ? 'COMPLETE' : 'SCANNING'}</span>
+          </div>
         </div>
         <div className="grid grid-cols-1 gap-1.5 text-[10px]">
           <InfoRow label="ENGINE" value={validatorLabel} />
@@ -319,12 +267,16 @@ export default function DockerPhysicsMonitor() {
 
       <div className="h-px bg-zinc-800" />
 
-      {/* ── Pre-Flight Check ── */}
+      {/* ── Forensic Checks ── */}
       <div className="space-y-1.5">
-        <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Pre-Flight Check</span>
-        <PreFlightItem label="Signature Match"  status={preflight.budget} />
-        <PreFlightItem label="Permission Audit" status={preflight.spof}   />
-        <PreFlightItem label="C2 Domain Check"   status={preflight.sla}    />
+        <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Forensic Checks</span>
+        <PreFlightItem label="Manifest Parsed"   status={permCount > 0 || fileCount > 0 ? true : null} />
+        <PreFlightItem label="Permission Audit"  status={isPass ? true : (permCount > 0 ? true : null)} />
+        <PreFlightItem label="Threat Scored"     status={verdict ? true : null} />
+        <PreFlightItem
+          label="C2 / Network Check"
+          status={verdict ? (netCount > 0 ? false : true) : null}
+        />
       </div>
     </div>
   );
