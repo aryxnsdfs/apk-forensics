@@ -4,6 +4,223 @@ import { useSimulationDispatch, useSimulationState } from '../../store/simulatio
 import { ShieldAlert, Bot, Terminal, Briefcase, Users, Gauge } from 'lucide-react';
 
 const THREAT_TXT = { LOW: 'text-emerald-400', MEDIUM: 'text-amber-400', HIGH: 'text-red-400', CRITICAL: 'text-red-300' };
+const TOKEN_COLORS = {
+  THREAT_LOW: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  THREAT_MEDIUM: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
+  THREAT_HIGH: 'border-red-500/35 bg-red-500/10 text-red-300',
+  THREAT_CRITICAL: 'border-red-400/40 bg-red-500/15 text-red-200',
+};
+
+function cleanText(value) {
+  return String(value || '').replace(/\*\*/g, '').replace(/\*/g, '').trim();
+}
+
+function tokenClass(token) {
+  if (TOKEN_COLORS[token]) return TOKEN_COLORS[token];
+  if (/^FLAG_/i.test(token)) return 'border-red-500/25 bg-red-500/10 text-red-300';
+  if (/^(INTERNET|READ_SMS|RECEIVE_SMS|SEND_SMS|ACCESS_|CAMERA|CONTACTS)/i.test(token)) return 'border-sky-500/25 bg-sky-500/10 text-sky-300';
+  if (/^ETA_/i.test(token)) return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
+  return 'border-zinc-700 bg-zinc-900/70 text-zinc-300';
+}
+
+function extractJsonBlock(text) {
+  const jsonStart = text.indexOf('{');
+  const jsonEnd = text.lastIndexOf('}');
+  if (jsonStart === -1 || jsonEnd <= jsonStart) return { before: text, json: null };
+
+  const jsonText = text.slice(jsonStart, jsonEnd + 1);
+  try {
+    return {
+      before: text.slice(0, jsonStart).replace(/\bJSON:\s*$/i, '').trim(),
+      after: text.slice(jsonEnd + 1).trim(),
+      json: JSON.parse(jsonText),
+    };
+  } catch {
+    return { before: text, json: null };
+  }
+}
+
+function parseSections(text) {
+  const sections = [];
+  const sectionPattern = /\b(EVIDENCE|ANSWER|RCA|MITIGATION):\s*/gi;
+  const matches = [...text.matchAll(sectionPattern)];
+  if (matches.length === 0) return { lead: text.trim(), sections };
+
+  const lead = text.slice(0, matches[0].index).trim();
+  matches.forEach((match, index) => {
+    const start = match.index + match[0].length;
+    const end = index + 1 < matches.length ? matches[index + 1].index : text.length;
+    const body = text.slice(start, end).trim();
+    sections.push({ label: match[1].toUpperCase(), body });
+  });
+  return { lead, sections };
+}
+
+function splitProtocol(lead) {
+  const parts = lead.split('|').map((part) => part.trim()).filter(Boolean);
+  if (parts.length < 2) return { title: lead, chips: [] };
+  return { title: parts[0], chips: parts.slice(1) };
+}
+
+function listFromValue(value) {
+  if (!value) return [];
+  if (Array.isArray(value)) return value;
+  return String(value).split(/\n|;\s*/).map((item) => item.replace(/^-\s*/, '').trim()).filter(Boolean);
+}
+
+function StructuredJson({ data }) {
+  const indicators = data.indicators || data.evidence || [];
+  const mitigations = listFromValue(data.mitigation);
+
+  return (
+    <div className="mt-2 rounded-md border border-zinc-700/70 bg-zinc-950/55 overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-zinc-800/70 text-[10px]">
+        {data.threat_level && (
+          <div className="bg-zinc-950/90 px-2 py-1.5">
+            <span className="block text-zinc-500 uppercase tracking-wide">Threat</span>
+            <span className={`font-bold font-mono ${THREAT_TXT[String(data.threat_level).replace(/THREAT_/i, '')] || 'text-zinc-200'}`}>
+              {String(data.threat_level).replace(/THREAT_/i, '')}
+            </span>
+          </div>
+        )}
+        {data.threat_score !== undefined && (
+          <div className="bg-zinc-950/90 px-2 py-1.5">
+            <span className="block text-zinc-500 uppercase tracking-wide">Score</span>
+            <span className="font-bold font-mono text-amber-300">{data.threat_score}</span>
+          </div>
+        )}
+        {data.malware_family && (
+          <div className="bg-zinc-950/90 px-2 py-1.5 col-span-2">
+            <span className="block text-zinc-500 uppercase tracking-wide">Family</span>
+            <span className="font-mono text-zinc-200">{data.malware_family}</span>
+          </div>
+        )}
+      </div>
+
+      {indicators.length > 0 && (
+        <div className="px-2 py-2 border-t border-zinc-800">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Indicators</span>
+          <div className="mt-1 space-y-1">
+            {indicators.slice(0, 4).map((item, index) => (
+              <div key={index} className="rounded border border-red-500/15 bg-red-500/5 px-2 py-1.5">
+                <span className="font-mono text-[10px] text-red-300">{typeof item === 'string' ? item : item.flag || `Finding ${index + 1}`}</span>
+                {typeof item !== 'string' && (
+                  <p className="mt-0.5 text-[11px] leading-snug text-zinc-300 break-words">{item.detail || item.where || String(item)}</p>
+                )}
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {data.rca && (
+        <div className="px-2 py-2 border-t border-zinc-800">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Root Cause</span>
+          <p className="mt-1 text-[11px] leading-snug text-zinc-300">{data.rca}</p>
+        </div>
+      )}
+
+      {mitigations.length > 0 && (
+        <div className="px-2 py-2 border-t border-zinc-800">
+          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Mitigation</span>
+          <div className="mt-1 flex flex-col gap-1">
+            {mitigations.slice(0, 4).map((item, index) => (
+              <span key={index} className="text-[11px] leading-snug text-zinc-300">{index + 1}. {item}</span>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}
+
+function SectionBody({ section }) {
+  const items = listFromValue(section.body);
+  const isList = section.label === 'EVIDENCE' || items.length > 1;
+
+  return (
+    <div className="rounded-md border border-zinc-800 bg-zinc-950/35 px-2 py-1.5">
+      <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{section.label}</span>
+      {isList ? (
+        <div className="mt-1 space-y-1">
+          {items.map((item, index) => (
+            <p key={index} className="text-[11px] leading-snug text-zinc-300 break-words">{item}</p>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-1 text-[11px] leading-snug text-zinc-300 break-words">{section.body}</p>
+      )}
+    </div>
+  );
+}
+
+// A genuine machine-to-machine line looks like "TAG | FIELD | FIELD" with an
+// all-caps leading token and short parts. Prose ("Parsed the manifest...") must
+// NOT be treated as a protocol line, or it renders as a shouty uppercase chip.
+function isProtocolLine(lead) {
+  if (!lead || !lead.includes('|')) return false;
+  const parts = lead.split('|').map((s) => s.trim()).filter(Boolean);
+  if (parts.length < 2) return false;
+  return /^[A-Z0-9_]{2,24}$/.test(parts[0]) && parts.every((p) => p.length <= 40);
+}
+
+function MessageBody({ msg }) {
+  const raw = cleanText(msg.english || msg.m2m || msg.think || '');
+  const { before, json } = extractJsonBlock(raw);
+
+  // Structured verdict → clean card (optionally with a lead sentence).
+  if (json) {
+    const leadTxt = (before || '').trim();
+    return (
+      <div className="space-y-2 min-w-0">
+        {leadTxt && (
+          <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">{leadTxt}</p>
+        )}
+        <StructuredJson data={json} />
+      </div>
+    );
+  }
+
+  const { lead, sections } = parseSections(before);
+
+  // Genuine M2M protocol line → title + chips.
+  if (isProtocolLine(lead)) {
+    const { title, chips } = splitProtocol(lead);
+    return (
+      <div className="space-y-2 min-w-0">
+        <div className="flex flex-wrap items-center gap-1.5">
+          <span className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-100">
+            {title}
+          </span>
+          {chips.slice(0, 12).map((chip, index) => (
+            <span key={`${chip}-${index}`} className={`rounded border px-1.5 py-0.5 text-[10px] font-mono ${tokenClass(chip)}`}>
+              {chip}
+            </span>
+          ))}
+        </div>
+        {sections.length > 0 && (
+          <div className="space-y-1.5">
+            {sections.map((section) => <SectionBody key={section.label} section={section} />)}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  // Plain prose (the common case for agent reasoning).
+  return (
+    <div className="space-y-2 min-w-0">
+      {lead && (
+        <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">{lead}</p>
+      )}
+      {sections.length > 0 && (
+        <div className="space-y-1.5">
+          {sections.map((section) => <SectionBody key={section.label} section={section} />)}
+        </div>
+      )}
+    </div>
+  );
+}
 
 // Parse the Chief Security Officer verdict line: "VERDICT | THREAT_X | Family | FLAG_A FLAG_B | ETA"
 function deriveVerdict(messages) {
@@ -181,24 +398,24 @@ export default function EnterpriseChat() {
                       {msg.agent.name || msg.agent.id || 'Agent'}
                     </span>
                     <span className="text-[9px] text-zinc-600 font-mono">{msg.timestamp}</span>
-                    {msg.think && (
-                      <button
-                        onClick={() => toggleThink(msg.id)}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors font-mono"
-                      >
-                        {expandedThink[msg.id] ? 'HIDE COT' : 'DEBUG'}
-                      </button>
-                    )}
-                  </div>
-
-                  {/* Message Content — human-readable only */}
-                  <div className="flex flex-wrap items-center gap-2">
-                    <p className="text-xs text-zinc-300 leading-relaxed">{(msg.english || '').replace(/\*\*/g, '').replace(/\*/g, '')}</p>
                     {msg.points !== undefined && msg.points !== 0 && (
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-500'}`}>
                         {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
                       </span>
                     )}
+                    {msg.think && (
+                      <button
+                        onClick={() => toggleThink(msg.id)}
+                        className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors font-mono"
+                      >
+                        {expandedThink[msg.id] ? 'HIDE REASONING' : 'REASONING'}
+                      </button>
+                    )}
+                  </div>
+
+                  {/* Message Content — human-readable only */}
+                  <div className="rounded-md border border-zinc-800/70 bg-zinc-900/40 px-2.5 py-2">
+                    <MessageBody msg={msg} />
                   </div>
 
                   {/* Hidden CoT Block */}

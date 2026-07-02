@@ -27,7 +27,7 @@ from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict
 
 from model.config import ModelConfigManager
 from engine.rewards import RewardCalculator
@@ -360,6 +360,8 @@ async def api_logs_endpoint():
 
 # -- Pydantic Models --
 class ModelSwitchRequest(BaseModel):
+    model_config = ConfigDict(protected_namespaces=())
+
     model_key: str
 
 
@@ -3204,10 +3206,19 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Code to review: {', '.join(seed.get('code_requests', [])) or 'none'}."
     )
     static_text = await _stage_llm_or_stub("DETECTIVE", _static_prompt(metadata, seed), static_stub)
+    static_english = (
+        f"Parsed the manifest for {pkg}. "
+        f"Dangerous permissions: {', '.join(metadata.get('permissions_dangerous', [])) or 'none'}. "
+        f"Suspicious combinations: {', '.join(seed.get('suspicious_combos', [])) or 'none'}. "
+        f"{seed.get('exported_component_count', 0)} exported component(s) flagged. "
+        f"Requesting code review of: "
+        f"{', '.join(c.rsplit('.', 1)[-1] for c in seed.get('code_requests', [])) or 'none'}."
+    )
     await broadcast({"type": "chat", "payload": {
         "agent": "DETECTIVE",
         "m2m": "STATIC | " + (" ".join(seed.get("suspicious_combos", [])) or "NO_COMBO") +
                " | REQ_CODE:" + (",".join(c.rsplit('.', 1)[-1] for c in seed.get("code_requests", [])) or "none"),
+        "english": static_english,
         "think": static_text,
         "points": 0.10,
     }})
@@ -3228,9 +3239,15 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Flags: {', '.join(rev_flags) or 'none'}."
     )
     rev_text = await _stage_llm_or_stub("CODER", _reverse_prompt(metadata, seed, snippets), rev_stub)
+    rev_details = " ".join(e["detail"] for e in seed.get("evidence", []))
+    rev_english = (
+        f"Reviewed the requested code. Confirmed indicators: {', '.join(rev_flags) or 'none'}. "
+        + (rev_details if rev_details else "No malicious behavior confirmed in the reviewed code.")
+    )
     await broadcast({"type": "chat", "payload": {
         "agent": "CODER",
         "m2m": "REVERSE | " + (" ".join(rev_flags) or "NO_FLAG"),
+        "english": rev_english,
         "think": rev_text,
         "points": 0.20,
     }})
@@ -3256,10 +3273,13 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Family: {verdict['malware_family']}. Indicators: {', '.join(verdict['indicators']) or 'none'}."
     )
     cso_text = await _stage_llm_or_stub("COMMANDER", _verdict_prompt(metadata, seed), cso_stub)
+    # english carries the authoritative verdict JSON so the UI renders its clean
+    # structured card (not the model's messy prose, which stays in `think`).
     await broadcast({"type": "chat", "payload": {
         "agent": "COMMANDER",
         "m2m": f"VERDICT | {verdict['threat_level']} | {verdict['malware_family']} | "
                f"{' '.join(verdict['indicators']) or 'NO_FLAGS'} | {verdict['eta']}",
+        "english": json.dumps(verdict),
         "think": cso_text,
         "points": 0.25,
     }})
