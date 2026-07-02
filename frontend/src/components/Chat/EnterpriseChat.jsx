@@ -68,64 +68,73 @@ function listFromValue(value) {
   return String(value).split(/\n|;\s*/).map((item) => item.replace(/^-\s*/, '').trim()).filter(Boolean);
 }
 
+const LEVEL_PILL = {
+  BENIGN:   'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  LOW:      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  MEDIUM:   'bg-amber-500/15 text-amber-300 border-amber-500/30',
+  HIGH:     'bg-red-500/15 text-red-300 border-red-500/40',
+  CRITICAL: 'bg-red-500/20 text-red-200 border-red-500/50',
+};
+
 function StructuredJson({ data }) {
-  const indicators = data.indicators || data.evidence || [];
+  const indicatorList = data.indicators || data.evidence || [];
+  const flags = indicatorList
+    .map((it) => (typeof it === 'string' ? it : it.flag))
+    .filter(Boolean);
   const mitigations = listFromValue(data.mitigation);
+  const level = String(data.threat_level || '').replace(/THREAT_/i, '').toUpperCase();
+  const pill = LEVEL_PILL[level] || 'bg-zinc-700/30 text-zinc-300 border-zinc-600';
 
   return (
-    <div className="mt-2 rounded-md border border-zinc-700/70 bg-zinc-950/55 overflow-hidden">
-      <div className="grid grid-cols-2 gap-px bg-zinc-800/70 text-[10px]">
-        {data.threat_level && (
-          <div className="bg-zinc-950/90 px-2 py-1.5">
-            <span className="block text-zinc-500 uppercase tracking-wide">Threat</span>
-            <span className={`font-bold font-mono ${THREAT_TXT[String(data.threat_level).replace(/THREAT_/i, '')] || 'text-zinc-200'}`}>
-              {String(data.threat_level).replace(/THREAT_/i, '')}
-            </span>
-          </div>
+    <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/50 overflow-hidden">
+      {/* Verdict header */}
+      <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-zinc-800/70 bg-zinc-900/40">
+        {level && (
+          <span className={`text-[10px] font-bold font-mono px-2 py-1 rounded border ${pill}`}>{level}</span>
         )}
         {data.threat_score !== undefined && (
-          <div className="bg-zinc-950/90 px-2 py-1.5">
-            <span className="block text-zinc-500 uppercase tracking-wide">Score</span>
-            <span className="font-bold font-mono text-amber-300">{data.threat_score}</span>
-          </div>
+          <span className="text-[11px] font-mono text-zinc-400">
+            <span className="text-zinc-200 font-bold">{data.threat_score}</span>
+            <span className="text-zinc-600">/100</span>
+          </span>
         )}
         {data.malware_family && (
-          <div className="bg-zinc-950/90 px-2 py-1.5 col-span-2">
-            <span className="block text-zinc-500 uppercase tracking-wide">Family</span>
-            <span className="font-mono text-zinc-200">{data.malware_family}</span>
-          </div>
+          <span className="ml-auto text-[11px] font-mono text-zinc-300">
+            <span className="text-zinc-600">family </span>{data.malware_family}
+          </span>
         )}
       </div>
 
-      {indicators.length > 0 && (
-        <div className="px-2 py-2 border-t border-zinc-800">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Indicators</span>
-          <div className="mt-1 space-y-1">
-            {indicators.slice(0, 4).map((item, index) => (
-              <div key={index} className="rounded border border-red-500/15 bg-red-500/5 px-2 py-1.5">
-                <span className="font-mono text-[10px] text-red-300">{typeof item === 'string' ? item : item.flag || `Finding ${index + 1}`}</span>
-                {typeof item !== 'string' && (
-                  <p className="mt-0.5 text-[11px] leading-snug text-zinc-300 break-words">{item.detail || item.where || String(item)}</p>
-                )}
-              </div>
+      {/* Indicators as inline chips */}
+      {flags.length > 0 && (
+        <div className="px-3 py-2.5 border-b border-zinc-800/70">
+          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Indicators</span>
+          <div className="flex flex-wrap gap-1.5">
+            {flags.slice(0, 8).map((f, i) => (
+              <span key={`${f}-${i}`} className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-300">
+                {f}
+              </span>
             ))}
           </div>
         </div>
       )}
 
       {data.rca && (
-        <div className="px-2 py-2 border-t border-zinc-800">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Root Cause</span>
-          <p className="mt-1 text-[11px] leading-snug text-zinc-300">{data.rca}</p>
+        <div className="px-3 py-2.5 border-b border-zinc-800/70">
+          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Root Cause</span>
+          <p className="text-[11px] leading-relaxed text-zinc-300 break-words">{data.rca}</p>
         </div>
       )}
 
       {mitigations.length > 0 && (
-        <div className="px-2 py-2 border-t border-zinc-800">
-          <span className="text-[10px] text-zinc-500 uppercase tracking-wide">Mitigation</span>
-          <div className="mt-1 flex flex-col gap-1">
-            {mitigations.slice(0, 4).map((item, index) => (
-              <span key={index} className="text-[11px] leading-snug text-zinc-300">{index + 1}. {item}</span>
+        <div className="px-3 py-2.5">
+          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Mitigation</span>
+          <div className="flex flex-col gap-1.5">
+            {mitigations.slice(0, 5).map((item, index) => (
+              <div key={index} className="flex items-start gap-2">
+                <span className="shrink-0 w-4 h-4 rounded-full bg-zinc-800 text-zinc-400 text-[9px] font-mono flex items-center justify-center mt-px">{index + 1}</span>
+                <span className="text-[11px] leading-relaxed text-zinc-300 break-words">{item}</span>
+              </div>
             ))}
           </div>
         </div>
@@ -372,7 +381,7 @@ export default function EnterpriseChat() {
       </AnimatePresence>
 
       {/* Messages */}
-      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-2">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto p-3 space-y-3.5">
         <AnimatePresence initial={false}>
           {messages.map((msg) => (
             <motion.div
@@ -382,11 +391,11 @@ export default function EnterpriseChat() {
               transition={{ duration: 0.2 }}
               className="group"
             >
-              <div className="flex items-start gap-2">
+              <div className="flex items-start gap-2.5">
                 {/* Agent Avatar — Professional badge */}
                 <div
-                  className="w-6 h-6 rounded flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: (msg.agent.color || '#71717a') + '18', border: `1px solid ${msg.agent.color || '#71717a'}35` }}
+                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
+                  style={{ backgroundColor: (msg.agent.color || '#71717a') + '1f', border: `1px solid ${msg.agent.color || '#71717a'}40` }}
                 >
                   {getAgentIcon(msg.agent.id, msg.agent.color || '#71717a')}
                 </div>
@@ -414,7 +423,10 @@ export default function EnterpriseChat() {
                   </div>
 
                   {/* Message Content — human-readable only */}
-                  <div className="rounded-md border border-zinc-800/70 bg-zinc-900/40 px-2.5 py-2">
+                  <div
+                    className="rounded-lg border border-zinc-800/70 border-l-2 bg-zinc-900/30 px-3 py-2.5"
+                    style={{ borderLeftColor: (msg.agent.color || '#71717a') + '99' }}
+                  >
                     <MessageBody msg={msg} />
                   </div>
 
