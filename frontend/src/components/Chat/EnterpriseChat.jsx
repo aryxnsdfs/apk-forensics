@@ -86,34 +86,46 @@ function StructuredJson({ data }) {
   const pill = LEVEL_PILL[level] || 'bg-zinc-700/30 text-zinc-300 border-zinc-600';
 
   return (
-    <div className="mt-2 rounded-lg border border-zinc-800 bg-zinc-950/50 overflow-hidden">
+    <motion.div
+      initial={{ opacity: 0, y: 6 }}
+      animate={{ opacity: 1, y: 0 }}
+      transition={{ duration: 0.25 }}
+      className="mt-2 rounded-xl border border-zinc-800 bg-zinc-950/50 overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-black/40"
+    >
       {/* Verdict header */}
-      <div className="flex items-center gap-2.5 px-3 py-2.5 border-b border-zinc-800/70 bg-zinc-900/40">
+      <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-zinc-800/70 bg-gradient-to-r from-zinc-900/60 to-transparent">
         {level && (
-          <span className={`text-[10px] font-bold font-mono px-2 py-1 rounded border ${pill}`}>{level}</span>
+          <span className={`font-display text-[11px] font-bold px-2.5 py-1 rounded-md border ${pill}`}>{level}</span>
         )}
         {data.threat_score !== undefined && (
-          <span className="text-[11px] font-mono text-zinc-400">
-            <span className="text-zinc-200 font-bold">{data.threat_score}</span>
+          <span className="font-mono text-[12px] text-zinc-400 tabular-nums">
+            <span className="text-zinc-100 font-bold">{data.threat_score}</span>
             <span className="text-zinc-600">/100</span>
           </span>
         )}
         {data.malware_family && (
-          <span className="ml-auto text-[11px] font-mono text-zinc-300">
-            <span className="text-zinc-600">family </span>{data.malware_family}
+          <span className="ml-auto text-[12px] text-zinc-300">
+            <span className="text-zinc-600 text-[10px] uppercase tracking-wide">family </span>
+            <span className="font-display font-medium">{data.malware_family}</span>
           </span>
         )}
       </div>
 
       {/* Indicators as inline chips */}
       {flags.length > 0 && (
-        <div className="px-3 py-2.5 border-b border-zinc-800/70">
-          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Indicators</span>
+        <div className="px-3.5 py-3 border-b border-zinc-800/70">
+          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-2">Indicators</span>
           <div className="flex flex-wrap gap-1.5">
             {flags.slice(0, 8).map((f, i) => (
-              <span key={`${f}-${i}`} className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-300">
+              <motion.span
+                key={`${f}-${i}`}
+                initial={{ opacity: 0, scale: 0.85 }}
+                animate={{ opacity: 1, scale: 1 }}
+                transition={{ delay: 0.05 * i, duration: 0.2 }}
+                className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20"
+              >
                 {f}
-              </span>
+              </motion.span>
             ))}
           </div>
         </div>
@@ -153,7 +165,7 @@ function StructuredJson({ data }) {
           </div>
         </div>
       )}
-    </div>
+    </motion.div>
   );
 }
 
@@ -416,11 +428,11 @@ export default function EnterpriseChat() {
 
                 <div className="flex-1 min-w-0">
                   {/* Agent Name + Timestamp */}
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <span className="text-[11px] font-semibold" style={{ color: msg.agent.color || '#71717a' }}>
+                  <div className="flex items-center gap-2 mb-1">
+                    <span className="font-display text-[12px] font-semibold tracking-tight" style={{ color: msg.agent.color || '#71717a' }}>
                       {msg.agent.name || msg.agent.id || 'Agent'}
                     </span>
-                    <span className="text-[9px] text-zinc-600 font-mono">{msg.timestamp}</span>
+                    <span className="text-[9px] text-zinc-600 font-mono tabular-nums">{msg.timestamp}</span>
                     {msg.points !== undefined && msg.points !== 0 && (
                       <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-500'}`}>
                         {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
@@ -438,7 +450,7 @@ export default function EnterpriseChat() {
 
                   {/* Message Content — human-readable only */}
                   <div
-                    className="rounded-lg border border-zinc-800/70 border-l-2 bg-zinc-900/30 px-3 py-2.5"
+                    className="rounded-lg border border-zinc-800/70 border-l-2 bg-zinc-900/30 px-3 py-2.5 transition-all duration-200 group-hover:bg-zinc-900/50 group-hover:border-zinc-700/80"
                     style={{ borderLeftColor: (msg.agent.color || '#71717a') + '99' }}
                   >
                     <MessageBody msg={msg} />

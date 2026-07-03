@@ -14,44 +14,59 @@ import RewardMathFeed from "./components/Training/RewardMathFeed";
 import FinOpsPreFlightAudit from "./components/Training/FinOpsPreFlightAudit";
 import { useSimulationState } from "./store/simulationStore";
 
+const THREAT_COLOR = {
+  BENIGN: 'text-emerald-400', LOW: 'text-emerald-400',
+  MEDIUM: 'text-amber-400', HIGH: 'text-red-400', CRITICAL: 'text-red-300',
+};
+
+function Metric({ label, children }) {
+  return (
+    <span className="text-zinc-500">
+      {label}: <span className="text-zinc-300">{children}</span>
+    </span>
+  );
+}
+
 function FinOpsSummaryBar() {
-  const { messages, scenarioComplete, spent, taskViews, rewardFeed, telemetry, elapsedMs } = useSimulationState();
+  const {
+    messages, scenarioComplete, rewardFeed, verdict,
+    apkPermissionCount, fileSizeBytes,
+  } = useSimulationState();
   if (messages.length === 0) return null;
 
-  const incidentCount = Object.keys(taskViews || {}).length || 1;
-  const aiCost = Number(spent || 0);
   const isComplete = scenarioComplete;
   const steps = rewardFeed.length;
-
-  // Forensic metrics
-  const scanTime = elapsedMs > 0 ? (Number(elapsedMs) / 1000).toFixed(1) : '1.4';
-  const memMB = Math.round(Number(telemetry?.ram) || 240);
-  const lvl = [...messages].reverse()
-    .map((m) => `${m.m2m || ''} ${m.english || ''}`).join(' ')
-    .match(/THREAT[_\s-]?(LOW|MEDIUM|HIGH|CRITICAL)/i);
-  const threatConfidence = lvl
-    ? ({ LOW: 64, MEDIUM: 87, HIGH: 92, CRITICAL: 97 })[lvl[1].toUpperCase()]
-    : 87;
+  const level = verdict ? String(verdict.threat_level || '').replace('THREAT_', '') : (isComplete ? '—' : 'SCANNING');
+  const levelClass = THREAT_COLOR[level] || 'text-zinc-400';
+  const sizeBytes = Number(fileSizeBytes) || 0;
+  const sizeLabel = sizeBytes <= 0 ? '—'
+    : sizeBytes < 1024 * 1024 ? `${(sizeBytes / 1024).toFixed(1)} KB`
+    : `${(sizeBytes / (1024 * 1024)).toFixed(2)} MB`;
 
   return (
-    <div className={`shrink-0 rounded-lg border px-4 py-2.5 ${isComplete ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900/50'}`}>
+    <div className={`shrink-0 rounded-lg border px-4 py-2.5 transition-colors ${isComplete ? 'border-emerald-500/30 bg-emerald-500/5' : 'border-zinc-800 bg-zinc-900/50'}`}>
       <div className="flex items-center gap-3 mb-1.5">
         <span className={`w-1.5 h-1.5 rounded-full ${isComplete ? 'bg-emerald-400' : 'bg-zinc-500 animate-pulse'}`} />
-        <span className={`text-[10px] font-bold uppercase tracking-widest ${isComplete ? 'text-emerald-300' : 'text-zinc-400'}`}>
-          VaultAgent Ingestion Summary
+        <span className={`font-display text-[11px] font-semibold tracking-wide ${isComplete ? 'text-emerald-300' : 'text-zinc-300'}`}>
+          VaultAgent Analysis Summary
         </span>
         <span className={`text-[9px] font-mono ${isComplete ? 'text-emerald-600' : 'text-zinc-500'}`}>
-          {isComplete ? '[ SUCCESS ]' : '[ SCANNING ]'}
+          {isComplete ? '[ COMPLETE ]' : '[ SCANNING ]'}
         </span>
       </div>
       <div className="flex items-center gap-x-5 gap-y-1.5 text-[10px] font-mono flex-wrap">
-        <span className="text-zinc-500">Target Artifacts: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>{incidentCount} APK</span></span>
-        <span className="text-zinc-500">Pipeline Execution Steps: <span className="text-zinc-300">{steps}</span></span>
-        <span className="text-zinc-500">Analysis Compute Overhead: <span className={isComplete ? 'text-emerald-300 font-bold' : 'text-zinc-300'}>${aiCost.toFixed(2)}</span> <span className="text-zinc-600">(100% Local Workspace)</span></span>
-        <span className="text-zinc-500">Data Exfiltration Risk: <span className="text-emerald-400 font-bold">ZERO</span> <span className="text-zinc-600">(Air-Gapped Validation)</span></span>
-        <span className="text-zinc-500">Scan Time: <span className="text-emerald-400 font-bold">{scanTime}s</span></span>
-        <span className="text-zinc-500">Memory Footprint: <span className="text-zinc-300">{memMB}MB</span></span>
-        <span className="text-zinc-500">Threat Confidence: <span className="text-emerald-400 font-bold">{threatConfidence}%</span></span>
+        <Metric label="Target">1 APK · {sizeLabel}</Metric>
+        <Metric label="Permissions">{apkPermissionCount || 0}</Metric>
+        <Metric label="Pipeline Steps">{steps}</Metric>
+        <span className="text-zinc-500">Threat Level: <span className={`font-bold ${levelClass}`}>{level}</span></span>
+        {verdict && (
+          <>
+            <Metric label="Score">{verdict.threat_score}/100</Metric>
+            <Metric label="Family">{verdict.malware_family}</Metric>
+            <Metric label="Indicators">{verdict.indicators?.length || 0}</Metric>
+          </>
+        )}
+        <span className="text-zinc-500">Data Exfiltration Risk: <span className="text-emerald-400 font-bold">ZERO</span> <span className="text-zinc-600">(Air-Gapped)</span></span>
       </div>
     </div>
   );

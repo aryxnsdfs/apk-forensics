@@ -9,6 +9,7 @@ export default {
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],
         mono: ['JetBrains Mono', 'ui-monospace', 'Consolas', 'monospace'],
+        display: ['Space Grotesk', 'Inter', 'sans-serif'],
       },
       colors: {
         surface: {

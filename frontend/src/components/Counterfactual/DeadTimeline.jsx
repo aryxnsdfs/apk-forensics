@@ -76,7 +76,7 @@ export default function DeadTimeline() {
       <div className="flex items-center justify-between mb-3">
         <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
           <span className="w-1 h-3 bg-zinc-600 rounded-full" />
-          Mitigation Strategy
+          Analysis Efficiency
         </span>
         <span className="text-[9px] font-mono text-zinc-600">
           {showPlaceholder ? 'waiting' : counterfactual ? 'live comparison ready' : 'tracking live estimate'}
@@ -90,32 +90,32 @@ export default function DeadTimeline() {
       ) : (
         <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
           <TimelineCard
-          title="Actual Timeline (Swarm OS)"
+          title="VaultAgent (Automated)"
           dotClass="bg-emerald-500"
           borderClass="border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
           bgClass="bg-emerald-500/[0.03]"
           progressClass="bg-emerald-500"
           progressPct={actualPct}
           metrics={[
-            { label: 'Resolution Cost', value: normalizeMetric(actual.cost, `$${liveSpent.toFixed(3)}`), valueClass: 'text-emerald-400' },
+            { label: 'Analysis Cost', value: normalizeMetric(actual.cost, `$${liveSpent.toFixed(3)}`), valueClass: 'text-emerald-400' },
             { label: 'Time', value: normalizeMetric(actual.time, `${liveSeconds}s`), valueClass: 'text-emerald-300' },
-            { label: 'SLA Status', value: normalizeMetric(actual.sla, telemetry.sla_remaining_seconds > 0 ? 'SAFE' : 'BREACHED'), valueClass: 'text-emerald-300 font-bold' },
-            { label: 'Outcome', value: normalizeMetric(actual.outcome, scenarioComplete ? 'RESOLVED' : 'COMPUTING...'), valueClass: 'text-emerald-300' },
+            { label: 'Method', value: 'Static · Offline', valueClass: 'text-emerald-300' },
+            { label: 'Outcome', value: normalizeMetric(actual.outcome, scenarioComplete ? 'REPORT READY' : 'ANALYZING...'), valueClass: 'text-emerald-300 font-bold' },
           ]}
         />
 
         <TimelineCard
-          title="Dead Timeline (Human Manual)"
+          title="Manual Analyst"
           dotClass="bg-red-500"
           borderClass="border-red-500/20 opacity-60 grayscale-[0.5]"
           bgClass="bg-red-500/[0.03]"
           progressClass="bg-red-500"
           progressPct={Math.min(deadPct, 100)}
           metrics={[
-            { label: 'Projected Cost', value: normalizeMetric(dead.cost, `$${Math.max(liveSpent * 4.5, 0.25).toFixed(2)}`), valueClass: 'text-red-400' },
-            { label: 'Time', value: normalizeMetric(dead.time, `${Math.max(10, Math.floor(liveSeconds * 2.4))}s`), valueClass: 'text-red-300' },
-            { label: 'SLA Status', value: normalizeMetric(dead.sla, 'BREACHED'), valueClass: 'text-red-300 font-bold' },
-            { label: 'Outcome', value: normalizeMetric(dead.outcome, scenarioComplete ? 'MANUAL_ESCALATION' : 'PROJECTING FALLBACK...'), valueClass: 'text-red-300' },
+            { label: 'Est. Cost', value: normalizeMetric(dead.cost, `$${Math.max(liveSpent * 4.5, 0.25).toFixed(2)}`), valueClass: 'text-red-400' },
+            { label: 'Est. Time', value: normalizeMetric(dead.time, `${Math.max(10, Math.floor(liveSeconds * 2.4))}m`), valueClass: 'text-red-300' },
+            { label: 'Method', value: 'Manual reverse-eng', valueClass: 'text-red-300' },
+            { label: 'Outcome', value: normalizeMetric(dead.outcome, scenarioComplete ? 'REPORT READY' : 'PENDING...'), valueClass: 'text-red-300 font-bold' },
           ]}
         />
       </div>
