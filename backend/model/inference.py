@@ -17,6 +17,7 @@ import requests
 from model.config import ModelConfigManager
 
 import os
+import time
 
 logger = logging.getLogger("swarm-os.inference")
 LOCAL_LM_STUDIO_URL = "http://localhost:1234/v1"
@@ -260,20 +261,52 @@ class InferenceEngine:
             headers = {"Content-Type": "application/json"}
             logger_endpoint = LOCAL_LM_STUDIO_URL
 
+        # Retry loop for scale-to-zero wake up (503 Service Unavailable / ConnectionErrors)
+        max_retries = 30
+        retry_delay = 4 # seconds
+        response = None
+
+        for attempt in range(max_retries):
+            try:
+                response = requests.post(
+                    endpoint_url,
+                    headers=headers,
+                    json={
+                        "model": runtime_model,
+                        "messages": messages,
+                        "temperature": temperature,
+                        "max_tokens": max_tokens,
+                        "stream": False
+                    },
+                    timeout=(5, 180)
+                )
+                
+                # Check for 503 Service Unavailable (HF Endpoint is booting up)
+                if response.status_code == 503 and HF_INFERENCE_ENDPOINT:
+                    logger.warning(
+                        "Inference endpoint is starting up (HTTP 503). Waiting %ss (attempt %s/%s)...",
+                        retry_delay, attempt + 1, max_retries
+                    )
+                    time.sleep(retry_delay)
+                    continue
+                
+                response.raise_for_status()
+                break # Success!
+                
+            except (requests.exceptions.ConnectionError, requests.exceptions.Timeout) as e:
+                if HF_INFERENCE_ENDPOINT and attempt < max_retries - 1:
+                    logger.warning(
+                        "Inference endpoint connection failed/timed out. It may be waking up. Waiting %ss (attempt %s/%s)... Error: %s",
+                        retry_delay, attempt + 1, max_retries, e
+                    )
+                    time.sleep(retry_delay)
+                    continue
+                raise e
+        else:
+            # Exceeded retries
+            raise requests.HTTPError("Inference endpoint failed to initialize within timeout period.")
+
         try:
-            response = requests.post(
-                endpoint_url,
-                headers=headers,
-                json={
-                    "model": runtime_model,
-                    "messages": messages,
-                    "temperature": temperature,
-                    "max_tokens": max_tokens,
-                    "stream": False
-                },
-                timeout=(5, 180)
-            )
-            response.raise_for_status()
             data = response.json()
             
             ai_text = data['choices'][0]['message']['content']
