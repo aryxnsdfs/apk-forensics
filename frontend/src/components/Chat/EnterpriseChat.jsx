@@ -209,7 +209,7 @@ function MessageBody({ msg }) {
     return (
       <div className="space-y-2 min-w-0">
         {leadTxt && (
-          <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">{leadTxt}</p>
+          <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">{leadTxt}</p>
         )}
         <StructuredJson data={json} />
       </div>
@@ -246,7 +246,7 @@ function MessageBody({ msg }) {
   return (
     <div className="space-y-2 min-w-0">
       {lead && (
-        <p className="text-xs text-zinc-300 leading-relaxed whitespace-pre-wrap break-words">{lead}</p>
+        <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">{lead}</p>
       )}
       {sections.length > 0 && (
         <div className="space-y-1.5">
@@ -305,7 +305,7 @@ export default function EnterpriseChat() {
 
   // Map agent id to Lucide icon component
   const getAgentIcon = (agentId, color) => {
-    const iconProps = { size: 12, color };
+    const iconProps = { size: 16, color };
     switch (agentId) {
       case 'commander': return <ShieldAlert {...iconProps} />;
       case 'detective': return <Bot {...iconProps} />;
@@ -417,19 +417,23 @@ export default function EnterpriseChat() {
               transition={{ duration: 0.2 }}
               className="group"
             >
-              <div className="flex items-start gap-2.5">
-                {/* Agent Avatar — Professional badge */}
+              <div className="flex items-start gap-3">
+                {/* Agent Avatar — gradient tile with ring */}
                 <div
-                  className="w-7 h-7 rounded-lg flex items-center justify-center shrink-0 mt-0.5"
-                  style={{ backgroundColor: (msg.agent.color || '#71717a') + '1f', border: `1px solid ${msg.agent.color || '#71717a'}40` }}
+                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg"
+                  style={{
+                    background: `linear-gradient(135deg, ${(msg.agent.color || '#71717a')}33, ${(msg.agent.color || '#71717a')}0d)`,
+                    border: `1px solid ${msg.agent.color || '#71717a'}55`,
+                    boxShadow: `0 0 12px ${msg.agent.color || '#71717a'}18`,
+                  }}
                 >
                   {getAgentIcon(msg.agent.id, msg.agent.color || '#71717a')}
                 </div>
 
                 <div className="flex-1 min-w-0">
                   {/* Agent Name + Timestamp */}
-                  <div className="flex items-center gap-2 mb-1">
-                    <span className="font-display text-[12px] font-semibold tracking-tight" style={{ color: msg.agent.color || '#71717a' }}>
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="font-display text-[13.5px] font-semibold tracking-tight" style={{ color: msg.agent.color || '#71717a' }}>
                       {msg.agent.name || msg.agent.id || 'Agent'}
                     </span>
                     <span className="text-[9px] text-zinc-600 font-mono tabular-nums">{msg.timestamp}</span>
@@ -450,8 +454,11 @@ export default function EnterpriseChat() {
 
                   {/* Message Content — human-readable only */}
                   <div
-                    className="rounded-lg border border-zinc-800/70 border-l-2 bg-zinc-900/30 px-3 py-2.5 transition-all duration-200 group-hover:bg-zinc-900/50 group-hover:border-zinc-700/80"
-                    style={{ borderLeftColor: (msg.agent.color || '#71717a') + '99' }}
+                    className="rounded-xl border border-zinc-800/70 border-l-[3px] px-3.5 py-3 transition-all duration-200 group-hover:border-zinc-700/80"
+                    style={{
+                      borderLeftColor: (msg.agent.color || '#71717a') + 'cc',
+                      background: 'linear-gradient(180deg, rgba(39,39,42,0.35), rgba(24,24,27,0.25))',
+                    }}
                   >
                     <MessageBody msg={msg} />
                   </div>
