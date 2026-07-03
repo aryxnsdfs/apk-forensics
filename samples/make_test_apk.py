@@ -129,13 +129,18 @@ def build_axml(package: str, permissions: list[str], components: list[tuple[str,
     return struct.pack("<HHI", 0x0003, 8, 8 + len(body)) + body
 
 
-def write_apk(filename: str, package: str, permissions: list[str], components: list[tuple[str, str]]):
+def write_apk(filename, package, permissions, components, size_kb=0):
     axml = build_axml(package, permissions, components)
     path = os.path.join(HERE, filename)
     with zipfile.ZipFile(path, "w", zipfile.ZIP_DEFLATED) as z:
         z.writestr("AndroidManifest.xml", axml)
         z.writestr("resources.arsc", b"\x02\x00\x0c\x00\x00\x00\x00\x00")
         z.writestr("META-INF/MANIFEST.MF", b"Manifest-Version: 1.0\r\n\r\n")
+        # Distinct, incompressible filler so each sample has a realistic, different
+        # on-disk size (mimics classes.dex / resources / native libs).
+        if size_kb:
+            z.writestr(zipfile.ZipInfo("assets/filler.bin"), os.urandom(size_kb * 1024),
+                       compress_type=zipfile.ZIP_STORED)
     return path
 
 
@@ -146,6 +151,7 @@ SPECS = [
         "package": "com.vaultagent.smsstealer",
         "permissions": ["RECEIVE_SMS", "READ_SMS", "INTERNET"],
         "components": [("receiver", ".SmsRx")],
+        "size_kb": 48,
         "what": "SMS/OTP Stealer — exported SMS receiver + INTERNET. Steals one-time passcodes.",
     },
     {
@@ -153,6 +159,7 @@ SPECS = [
         "package": "com.vaultagent.bankoverlay",
         "permissions": ["SYSTEM_ALERT_WINDOW", "INTERNET", "READ_PHONE_STATE"],
         "components": [("service", ".OverlayService")],
+        "size_kb": 71,
         "what": "Banking Overlay — draws fake login screens over apps to phish credentials.",
     },
     {
@@ -160,6 +167,7 @@ SPECS = [
         "package": "com.vaultagent.spyware",
         "permissions": ["RECORD_AUDIO", "ACCESS_FINE_LOCATION", "READ_CONTACTS", "INTERNET"],
         "components": [("service", ".TrackerService")],
+        "size_kb": 96,
         "what": "Spyware/Stalkerware — records audio, tracks GPS, harvests contacts.",
     },
     {
@@ -167,6 +175,7 @@ SPECS = [
         "package": "com.vaultagent.dropper",
         "permissions": ["REQUEST_INSTALL_PACKAGES", "INTERNET", "WRITE_EXTERNAL_STORAGE"],
         "components": [("receiver", ".UpdateRx")],
+        "size_kb": 33,
         "what": "Dropper — downloads and installs a second-stage payload.",
     },
     {
@@ -174,6 +183,7 @@ SPECS = [
         "package": "com.vaultagent.flashlight",
         "permissions": ["CAMERA", "INTERNET", "VIBRATE"],
         "components": [("activity", ".MainActivity")],
+        "size_kb": 12,
         "what": "Benign flashlight/QR app — CAMERA justified, no dangerous combo. Should score low.",
     },
 ]
@@ -182,8 +192,9 @@ SPECS = [
 def main():
     print("Building test APKs in", HERE, "\n")
     for spec in SPECS:
-        path = write_apk(spec["file"], spec["package"], spec["permissions"], spec["components"])
-        print(f"  {spec['file']:30s} {os.path.getsize(path):>5d} B  — {spec['what']}")
+        path = write_apk(spec["file"], spec["package"], spec["permissions"],
+                         spec["components"], spec.get("size_kb", 0))
+        print(f"  {spec['file']:30s} {os.path.getsize(path) // 1024:>4d} KB  — {spec['what']}")
     print("\nUpload any of these via the dashboard to see different verdicts.")
 
 

@@ -3211,6 +3211,9 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     await _record_causal_event("apk_root", f"APK: {pkg}", "error",
                                f"{metadata.get('apk_size_kb', 0)}KB, "
                                f"{len(metadata.get('permissions', []))} permissions")
+    # Track the growing attack chain so the DAG reads as an escalation path
+    # (root → combos → indicators → verdict) instead of a flat star.
+    chain_parent = "apk_root"
 
     # ── Stage 1: Static Analyst (DETECTIVE) ──────────────────────────────
     static_stub = (
@@ -3254,8 +3257,10 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "reward_target": "Static triage",
     }})
     for combo in seed.get("suspicious_combos", []):
-        await _record_causal_event(f"combo_{combo}", combo, "error",
-                                   "Suspicious permission combination", parent_id="apk_root")
+        node_id = f"combo_{combo}"
+        await _record_causal_event(node_id, combo, "error",
+                                   "Suspicious permission combination", parent_id=chain_parent)
+        chain_parent = node_id
     await asyncio.sleep(0.4)
 
     # ── Stage 2: Reverse Engineer (CODER) — fetch only requested snippets ──
@@ -3297,8 +3302,10 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "reward_target": "Reverse engineering",
     }})
     for ev in seed.get("evidence", []):
-        await _record_causal_event(f"ev_{ev['flag']}", ev["flag"], "escalation",
-                                   ev["detail"], parent_id="apk_root")
+        node_id = f"ev_{ev['flag']}"
+        await _record_causal_event(node_id, ev["flag"], "escalation",
+                                   ev["detail"], parent_id=chain_parent)
+        chain_parent = node_id
     await asyncio.sleep(0.4)
 
     # ── Stage 3: Chief Security Officer (COMMANDER) — verdict + RCA ───────
@@ -3351,7 +3358,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "reward_target": "Verdict + RCA",
     }})
     await _record_causal_event("verdict", f"{verdict['threat_level']}: {verdict['malware_family']}",
-                               "resolution", verdict["rca"], parent_id="apk_root")
+                               "resolution", verdict["rca"], parent_id=chain_parent)
 
     # Forensic verification result — populates the Execution Evidence panels.
     await broadcast({"type": "code_result", "payload": {
@@ -3433,7 +3440,7 @@ def _build_mitigation(flags: list) -> list:
         return ["No action required — no malicious indicators found."]
     mit = [
         "Uninstall the application if it is untrusted.",
-        "Revoke SMS and other dangerous permissions.",
+        "Revoke the dangerous permissions it was granted.",
     ]
     if "FLAG_SMS_THEFT" in flags:
         mit.append("Rotate credentials for accounts protected by SMS-based OTP.")
@@ -3541,9 +3548,10 @@ def _build_rca_text(metadata: dict, seed: dict) -> str:
         if e["flag"] != "FLAG_EXPORTED_SURFACE"
     )
 
-    summary = f"{pkg} is classified as an {family} with a {level} risk score ({score}/100). "
+    summary = f"{pkg} is classified as {family} with a {level} risk score ({score}/100). "
     if mechanism:
-        summary += f"Static analysis found {mechanism}. "
+        mechanism = mechanism[0].lower() + mechanism[1:]
+        summary += f"Static analysis found code that {mechanism}. "
     if "FLAG_EXPORTED_SURFACE" in fset:
         summary += ("Additionally, an exported component lacks permission protection, "
                     "increasing the application's attack surface.")
