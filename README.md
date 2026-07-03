@@ -1,16 +1,3 @@
----
-title: VaultAgent
-emoji: "\U0001F6E1"
-colorFrom: red
-colorTo: gray
-sdk: docker
-app_port: 7860
-pinned: true
-suggested_hardware: t4-small
----
-
-<div align="center">
-
 # 🛡️ VaultAgent
 
 ### Offline, Air-Gapped Android Malware Forensic Platform
