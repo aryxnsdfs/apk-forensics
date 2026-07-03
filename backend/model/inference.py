@@ -4,15 +4,24 @@ Provides a unified interface for LLM inference. Reads from config.yaml
 for active model selection. Supports mock mode for development and
 easy swap between model backends (Unsloth, HuggingFace, API).
 """
+"""
+Model Inference Abstraction Layer
+Provides a unified interface for LLM inference. Reads from config.yaml
+for active model selection. Supports mock mode for development and
+easy swap between model backends (Unsloth, HuggingFace, API).
+"""
 
 import logging
 from typing import Optional
 import requests
 from model.config import ModelConfigManager
 
+import os
 
 logger = logging.getLogger("swarm-os.inference")
 LOCAL_LM_STUDIO_URL = "http://localhost:1234/v1"
+HF_INFERENCE_ENDPOINT = os.getenv("HF_INFERENCE_ENDPOINT", "")
+HF_API_TOKEN = os.getenv("HF_API_TOKEN", "")
 
 
 class InferenceEngine:
@@ -232,12 +241,29 @@ class InferenceEngine:
         messages.append({"role": "user", "content": prompt})
         runtime_model = self._resolve_runtime_model(model_key, configured_runtime_model)
 
-        # Hit the Local GGUF Server (LM Studio default port is 1234)
-        # timeout=(connect_s, read_s): fail fast if LM Studio is offline (5s),
-        # but give the model up to 180s to finish prefill + generation.
+        # If a Hugging Face Endpoint is configured, use it. Otherwise, use the local GGUF server.
+        if HF_INFERENCE_ENDPOINT and HF_API_TOKEN:
+            # Hugging Face TGI (Text Generation Inference) uses a similar /v1/chat/completions API if configured properly,
+            # or we can hit the root if it's deployed as a standard text-generation endpoint.
+            # Assuming standard OpenAI compatible endpoint for HF Dedicated Endpoints:
+            endpoint_url = HF_INFERENCE_ENDPOINT
+            if not endpoint_url.endswith("/v1/chat/completions"):
+                endpoint_url = f"{endpoint_url.rstrip('/')}/v1/chat/completions"
+                
+            headers = {
+                "Authorization": f"Bearer {HF_API_TOKEN}",
+                "Content-Type": "application/json"
+            }
+            logger_endpoint = HF_INFERENCE_ENDPOINT
+        else:
+            endpoint_url = f"{LOCAL_LM_STUDIO_URL}/chat/completions"
+            headers = {"Content-Type": "application/json"}
+            logger_endpoint = LOCAL_LM_STUDIO_URL
+
         try:
             response = requests.post(
-                f"{LOCAL_LM_STUDIO_URL}/chat/completions",
+                endpoint_url,
+                headers=headers,
                 json={
                     "model": runtime_model,
                     "messages": messages,
@@ -258,7 +284,7 @@ class InferenceEngine:
                 agent_role,
                 model_key,
                 response_model,
-                LOCAL_LM_STUDIO_URL,
+                logger_endpoint,
                 tokens_used,
             )
 
@@ -266,7 +292,7 @@ class InferenceEngine:
                 "response": ai_text,
                 "model_used": response_model,
                 "tokens_generated": tokens_used,
-                "think_block": f"[Generated securely on local PC via GGUF]",
+                "think_block": f"[Generated via {logger_endpoint}]",
             }
         except requests.HTTPError as e:
             status = e.response.status_code if e.response is not None else "unknown"
@@ -274,19 +300,19 @@ class InferenceEngine:
             logger.error(
                 "Local GGUF server returned HTTP %s at %s using model '%s': %s",
                 status,
-                LOCAL_LM_STUDIO_URL,
+                logger_endpoint,
                 runtime_model,
                 body[:1000],
             )
             fallback = self._mock_generate(prompt, agent_role, model_key)
-            fallback["think_block"] = f"[Local GGUF unavailable: HTTP {status}] Deterministic fallback response generated."
+            fallback["think_block"] = f"[{logger_endpoint} unavailable: HTTP {status}] Deterministic fallback response generated."
             return fallback
         except Exception as e:
-            logger.error("Failed to connect to local GGUF server at %s: %s", LOCAL_LM_STUDIO_URL, e)
+            logger.error("Failed to connect to inference server at %s: %s", logger_endpoint, e)
             # Fall back to deterministic, incident-aware mock output so the app stays usable
             # without silently forcing every failed call into the old OOM storyline.
             fallback = self._mock_generate(prompt, agent_role, model_key)
-            fallback["think_block"] = f"[Local GGUF unavailable: {e}] Deterministic fallback response generated."
+            fallback["think_block"] = f"[{logger_endpoint} unavailable: {e}] Deterministic fallback response generated."
             return fallback
 
     def _load_model(self, model_key: str):
