@@ -3,7 +3,7 @@ import { useSimulationState } from '../../store/simulationStore';
 
 function TimelineCard({ title, dotClass, borderClass, bgClass, metrics, progressClass, progressPct }) {
   return (
-    <div className={`rounded-lg border ${borderClass} ${bgClass} p-3 flex flex-col gap-3 min-w-0`}>
+    <div className={`glass-inset rounded-2xl ${borderClass} ${bgClass} p-3 flex flex-col gap-3 min-w-0`}>
       <div className="flex items-center gap-1.5">
         <span className={`w-2 h-2 rounded-full ${dotClass}`} />
         <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-200">{title}</span>
@@ -13,7 +13,7 @@ function TimelineCard({ title, dotClass, borderClass, bgClass, metrics, progress
         {metrics.map((metric) => (
           <div key={metric.label} className="flex items-start justify-between gap-3">
             <span className="text-[10px] text-zinc-500 shrink-0">{metric.label}</span>
-            <span className={`min-w-0 text-[11px] font-mono text-right break-all ${metric.valueClass}`}>
+            <span className={`min-w-0 text-[11px] forensic-token text-right break-all ${metric.valueClass}`}>
               {metric.value}
             </span>
           </div>
@@ -25,7 +25,7 @@ function TimelineCard({ title, dotClass, borderClass, bgClass, metrics, progress
           <span>Execution Track</span>
           <span className="font-mono">{progressPct}%</span>
         </div>
-        <div className="h-1.5 rounded-full bg-zinc-800 overflow-hidden">
+        <div className="h-1.5 rounded-full bg-black/50 overflow-hidden">
           <motion.div
             className={`h-full ${progressClass}`}
             initial={{ width: 0 }}
@@ -73,34 +73,34 @@ export default function DeadTimeline() {
       animate={{ opacity: 1, scale: 1 }}
       className="panel-card p-3 flex flex-col"
     >
-      <div className="flex items-center justify-between mb-3">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-          <span className="w-1 h-3 bg-zinc-600 rounded-full" />
+      <div className="relative z-10 flex items-center justify-between mb-3">
+        <span className="text-[10px] font-bold prism-title uppercase tracking-widest flex items-center gap-1.5">
+          <span className="w-1 h-3 bg-blue-300 rounded-full" />
           Analysis Efficiency
         </span>
-        <span className="text-[9px] font-mono text-zinc-600">
+        <span className="text-[9px] forensic-token text-zinc-600">
           {showPlaceholder ? 'waiting' : counterfactual ? 'live comparison ready' : 'tracking live estimate'}
         </span>
       </div>
 
       {showPlaceholder ? (
-        <div className="h-32 flex items-center justify-center border border-zinc-800/50 bg-zinc-900/20 rounded-lg">
-          <p className="text-[10px] text-zinc-600 font-mono italic">Awaiting scenario execution...</p>
+        <div className="relative z-10 h-32 flex items-center justify-center glass-inset rounded-2xl">
+          <p className="text-[10px] text-zinc-600 forensic-token italic">Awaiting scenario execution...</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 xl:grid-cols-2 gap-2">
+        <div className="relative z-10 grid grid-cols-1 xl:grid-cols-2 gap-2">
           <TimelineCard
           title="VaultAgent (Automated)"
-          dotClass="bg-emerald-500"
-          borderClass="border-emerald-500/20 shadow-[0_0_15px_-5px_rgba(16,185,129,0.1)]"
-          bgClass="bg-emerald-500/[0.03]"
-          progressClass="bg-emerald-500"
+          dotClass="bg-blue-300"
+          borderClass="border-blue-300/20 shadow-[0_0_18px_-5px_rgba(96,165,250,0.22)]"
+          bgClass="bg-blue-500/[0.04]"
+          progressClass="bg-blue-400"
           progressPct={actualPct}
           metrics={[
-            { label: 'Analysis Cost', value: normalizeMetric(actual.cost, `$${liveSpent.toFixed(3)}`), valueClass: 'text-emerald-400' },
-            { label: 'Time', value: normalizeMetric(actual.time, `${liveSeconds}s`), valueClass: 'text-emerald-300' },
-            { label: 'Method', value: 'Static · Offline', valueClass: 'text-emerald-300' },
-            { label: 'Outcome', value: normalizeMetric(actual.outcome, scenarioComplete ? 'REPORT READY' : 'ANALYZING...'), valueClass: 'text-emerald-300 font-bold' },
+            { label: 'Analysis Cost', value: normalizeMetric(actual.cost, `$${liveSpent.toFixed(3)}`), valueClass: 'text-blue-200' },
+            { label: 'Time', value: normalizeMetric(actual.time, `${liveSeconds}s`), valueClass: 'text-sky-200' },
+            { label: 'Method', value: 'Static · Offline', valueClass: 'text-sky-200' },
+            { label: 'Outcome', value: normalizeMetric(actual.outcome, scenarioComplete ? 'REPORT READY' : 'ANALYZING...'), valueClass: 'text-blue-200 font-bold' },
           ]}
         />
 

@@ -4,22 +4,22 @@ export default function ModelSwitcher() {
   const { modelConfig } = useSimulationState();
 
   return (
-    <div className="panel-card p-3 h-full flex flex-col">
-      <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider mb-2">
+    <div className="glass-surface p-3 h-full flex flex-col">
+      <span className="prism-title text-[10px] font-semibold uppercase tracking-wider mb-2">
         Model Configuration
       </span>
 
       {/* GPU Info */}
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
         <span className="text-[10px] text-zinc-500">Current GPU</span>
         <span className="text-[10px] font-mono text-blue-400">RTX 3060 12GB</span>
       </div>
 
       {/* Active Model */}
-      <div className="mb-3 pb-2 border-b border-zinc-800">
+      <div className="mb-3 pb-2 border-b border-white/10">
         <span className="text-[9px] text-zinc-500 block mb-1">PRIMARY MODEL</span>
         <div className="flex items-center gap-2">
-          <div className="w-1.5 h-1.5 rounded-full bg-emerald-500 status-dot-live" />
+          <div className="w-1.5 h-1.5 rounded-full bg-sky-300 shadow-[0_0_14px_rgba(125,211,252,0.45)]" />
           <span className="text-[10px] font-mono text-zinc-200">
             {modelConfig.models[modelConfig.active_model]?.name}
           </span>
@@ -30,7 +30,7 @@ export default function ModelSwitcher() {
       </div>
 
       {/* Per-Agent Overrides */}
-      <div className="mb-3 pb-2 border-b border-zinc-800">
+      <div className="mb-3 pb-2 border-b border-white/10">
         <span className="text-[9px] text-zinc-500 block mb-1">AGENT MODEL ASSIGNMENTS</span>
         <div className="space-y-1">
           {['COMMANDER', 'DETECTIVE', 'CODER'].map((agent) => {
@@ -67,17 +67,17 @@ export default function ModelSwitcher() {
             return (
               <div
                 key={key}
-                className={`rounded p-2 border text-[10px] ${
+                className={`glass-inset rounded-xl p-2 border text-[10px] ${
                   isActive
-                    ? 'border-emerald-800/50 bg-emerald-950/10'
-                    : 'border-zinc-800 bg-zinc-900/50'
+                    ? 'border-sky-400/40 bg-sky-500/10'
+                    : 'border-white/10 bg-white/[0.03]'
                 }`}
               >
                 <div className="flex items-center justify-between mb-0.5">
-                  <span className={`font-medium ${isActive ? 'text-emerald-400' : 'text-zinc-300'}`}>
+                  <span className={`font-medium ${isActive ? 'text-sky-200' : 'text-zinc-300'}`}>
                     {model.name}
                   </span>
-                  {isActive && <span className="text-[8px] text-emerald-400 font-mono">ACTIVE</span>}
+                  {isActive && <span className="forensic-token text-[8px] text-sky-200 font-mono">READY</span>}
                 </div>
                 <div className="flex items-center gap-3 text-[9px] text-zinc-500 font-mono">
                   <span>VRAM: {model.max_vram_gb}GB</span>

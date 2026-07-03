@@ -10,19 +10,19 @@ export default function RewardCurve() {
 
   return (
     <div className="panel-card p-3 h-full flex flex-col">
-      <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+      <div className="relative z-10 flex items-center justify-between mb-2">
+        <span className="text-[10px] font-semibold prism-title uppercase tracking-wider">
           Evaluator Reward Trace
         </span>
-        <span className="text-[10px] font-mono text-emerald-400">
+        <span className="text-[10px] forensic-token text-blue-200">
           {latest !== null ? `Total: ${latest.toFixed(2)}` : 'Awaiting Evidence'}
         </span>
       </div>
-      <div className="flex-1 min-h-0 relative">
+      <div className="relative z-10 flex-1 min-h-0">
         {rewardHistory.length === 0 ? (
           <div className="absolute inset-0 flex items-center justify-center">
             <div className="text-center">
-              <div className="w-10 h-10 mx-auto mb-2 rounded-lg bg-zinc-800/50 flex items-center justify-center">
+              <div className="black-button w-10 h-10 mx-auto mb-2 rounded-xl flex items-center justify-center">
                 <svg className="w-5 h-5 text-zinc-600" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
                   <polyline points="22,12 18,12 15,21 9,3 6,12 2,12" />
                 </svg>
@@ -35,8 +35,8 @@ export default function RewardCurve() {
             <AreaChart data={rewardHistory} margin={{ top: 5, right: 5, bottom: 5, left: -20 }}>
               <defs>
                 <linearGradient id="rewardGradient" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#10b981" stopOpacity={0.3} />
-                  <stop offset="95%" stopColor="#10b981" stopOpacity={0} />
+                  <stop offset="5%" stopColor="#60a5fa" stopOpacity={0.34} />
+                  <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0} />
                 </linearGradient>
               </defs>
               <XAxis
@@ -54,9 +54,9 @@ export default function RewardCurve() {
               <ReferenceLine y={0} stroke="#3f3f46" strokeDasharray="3 3" />
               <Tooltip
                 contentStyle={{
-                  backgroundColor: '#18181b',
-                  border: '1px solid #27272a',
-                  borderRadius: '6px',
+                  backgroundColor: 'rgba(10, 12, 20, 0.92)',
+                  border: '1px solid rgba(147, 197, 253, 0.22)',
+                  borderRadius: '12px',
                   fontSize: '10px',
                   fontFamily: 'JetBrains Mono, monospace',
                   color: '#a1a1aa',
@@ -67,11 +67,11 @@ export default function RewardCurve() {
               <Area
                 type="linear"
                 dataKey="reward"
-                stroke="#10b981"
+                stroke="#60a5fa"
                 strokeWidth={2}
                 fill="url(#rewardGradient)"
                 dot={false}
-                activeDot={{ r: 3, fill: '#10b981', stroke: '#18181b', strokeWidth: 2 }}
+                activeDot={{ r: 3, fill: '#93c5fd', stroke: '#111827', strokeWidth: 2 }}
                 isAnimationActive={true}
                 animationDuration={400}
               />

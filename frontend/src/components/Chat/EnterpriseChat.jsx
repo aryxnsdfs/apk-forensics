@@ -3,9 +3,9 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { useSimulationDispatch, useSimulationState } from '../../store/simulationStore';
 import { ShieldAlert, Bot, Terminal, Briefcase, Users, Gauge } from 'lucide-react';
 
-const THREAT_TXT = { LOW: 'text-emerald-400', MEDIUM: 'text-amber-400', HIGH: 'text-red-400', CRITICAL: 'text-red-300' };
+const THREAT_TXT = { LOW: 'text-sky-300', MEDIUM: 'text-amber-300', HIGH: 'text-red-300', CRITICAL: 'text-red-200' };
 const TOKEN_COLORS = {
-  THREAT_LOW: 'border-emerald-500/30 bg-emerald-500/10 text-emerald-300',
+  THREAT_LOW: 'border-sky-400/30 bg-sky-500/10 text-sky-200',
   THREAT_MEDIUM: 'border-amber-500/30 bg-amber-500/10 text-amber-300',
   THREAT_HIGH: 'border-red-500/35 bg-red-500/10 text-red-300',
   THREAT_CRITICAL: 'border-red-400/40 bg-red-500/15 text-red-200',
@@ -17,10 +17,10 @@ function cleanText(value) {
 
 function tokenClass(token) {
   if (TOKEN_COLORS[token]) return TOKEN_COLORS[token];
-  if (/^FLAG_/i.test(token)) return 'border-red-500/25 bg-red-500/10 text-red-300';
+  if (/^FLAG_/i.test(token)) return 'border-fuchsia-400/30 bg-fuchsia-500/10 text-fuchsia-200';
   if (/^(INTERNET|READ_SMS|RECEIVE_SMS|SEND_SMS|ACCESS_|CAMERA|CONTACTS)/i.test(token)) return 'border-sky-500/25 bg-sky-500/10 text-sky-300';
-  if (/^ETA_/i.test(token)) return 'border-emerald-500/25 bg-emerald-500/10 text-emerald-300';
-  return 'border-zinc-700 bg-zinc-900/70 text-zinc-300';
+  if (/^ETA_/i.test(token)) return 'border-blue-500/25 bg-blue-500/10 text-blue-200';
+  return 'border-white/10 bg-black/30 text-zinc-300';
 }
 
 function extractJsonBlock(text) {
@@ -69,8 +69,8 @@ function listFromValue(value) {
 }
 
 const LEVEL_PILL = {
-  BENIGN:   'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
-  LOW:      'bg-emerald-500/15 text-emerald-300 border-emerald-500/30',
+  BENIGN:   'bg-sky-500/15 text-sky-200 border-sky-400/30',
+  LOW:      'bg-sky-500/15 text-sky-200 border-sky-400/30',
   MEDIUM:   'bg-amber-500/15 text-amber-300 border-amber-500/30',
   HIGH:     'bg-red-500/15 text-red-300 border-red-500/40',
   CRITICAL: 'bg-red-500/20 text-red-200 border-red-500/50',
@@ -90,15 +90,15 @@ function StructuredJson({ data }) {
       initial={{ opacity: 0, y: 6 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.25 }}
-      className="mt-2 rounded-xl border border-zinc-800 bg-zinc-950/50 overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-black/40"
+      className="code-prism mt-2 rounded-2xl overflow-hidden transition-shadow duration-300 hover:shadow-lg hover:shadow-blue-950/30"
     >
       {/* Verdict header */}
-      <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-zinc-800/70 bg-gradient-to-r from-zinc-900/60 to-transparent">
+      <div className="flex items-center gap-2.5 px-3.5 py-3 border-b border-sky-300/10 bg-gradient-to-r from-blue-500/10 via-violet-500/10 to-transparent">
         {level && (
-          <span className={`font-display text-[11px] font-bold px-2.5 py-1 rounded-md border ${pill}`}>{level}</span>
+          <span className={`forensic-token text-[11px] font-bold px-2.5 py-1 rounded-lg border ${pill}`}>{level}</span>
         )}
         {data.threat_score !== undefined && (
-          <span className="font-mono text-[12px] text-zinc-400 tabular-nums">
+          <span className="forensic-token text-[12px] text-zinc-400 tabular-nums">
             <span className="text-zinc-100 font-bold">{data.threat_score}</span>
             <span className="text-zinc-600">/100</span>
           </span>
@@ -113,7 +113,7 @@ function StructuredJson({ data }) {
 
       {/* Indicators as inline chips */}
       {flags.length > 0 && (
-        <div className="px-3.5 py-3 border-b border-zinc-800/70">
+        <div className="px-3.5 py-3 border-b border-sky-300/10">
           <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-2">Indicators</span>
           <div className="flex flex-wrap gap-1.5">
             {flags.slice(0, 8).map((f, i) => (
@@ -122,7 +122,7 @@ function StructuredJson({ data }) {
                 initial={{ opacity: 0, scale: 0.85 }}
                 animate={{ opacity: 1, scale: 1 }}
                 transition={{ delay: 0.05 * i, duration: 0.2 }}
-                className="text-[10px] font-mono px-2 py-0.5 rounded-full border border-red-500/25 bg-red-500/10 text-red-300 transition-colors hover:bg-red-500/20"
+                className="forensic-token text-[10px] px-2 py-0.5 rounded-full border border-fuchsia-400/25 bg-fuchsia-500/10 text-fuchsia-200 transition-colors hover:bg-fuchsia-500/20"
               >
                 {f}
               </motion.span>
@@ -132,19 +132,19 @@ function StructuredJson({ data }) {
       )}
 
       {data.rca && (
-        <div className="px-3 py-2.5 border-b border-zinc-800/70">
+        <div className="px-3 py-2.5 border-b border-sky-300/10">
           <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1">Root Cause</span>
           <p className="text-[11px] leading-relaxed text-zinc-300 break-words">{data.rca}</p>
         </div>
       )}
 
       {Array.isArray(data.impact) && data.impact.length > 0 && (
-        <div className="px-3 py-2.5 border-b border-zinc-800/70">
+        <div className="px-3 py-2.5 border-b border-sky-300/10">
           <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Potential Impact</span>
           <ul className="flex flex-col gap-1">
             {data.impact.slice(0, 5).map((item, index) => (
               <li key={index} className="flex items-start gap-2 text-[11px] leading-relaxed text-zinc-300 break-words">
-                <span className="shrink-0 text-red-400/70 mt-px">•</span>
+                <span className="shrink-0 text-fuchsia-300/70 mt-px">•</span>
                 <span>{item}</span>
               </li>
             ))}
@@ -158,7 +158,7 @@ function StructuredJson({ data }) {
           <div className="flex flex-col gap-1.5">
             {mitigations.slice(0, 5).map((item, index) => (
               <div key={index} className="flex items-start gap-2">
-                <span className="shrink-0 w-4 h-4 rounded-full bg-zinc-800 text-zinc-400 text-[9px] font-mono flex items-center justify-center mt-px">{index + 1}</span>
+                <span className="black-button shrink-0 w-4 h-4 rounded-full text-zinc-300 text-[9px] forensic-token flex items-center justify-center mt-px">{index + 1}</span>
                 <span className="text-[11px] leading-relaxed text-zinc-300 break-words">{item}</span>
               </div>
             ))}
@@ -169,21 +169,36 @@ function StructuredJson({ data }) {
   );
 }
 
+function FormatProse({ text }) {
+  if (!text) return null;
+  const parts = text.split(/([A-Z0-9]+_[A-Z0-9_]+)/g);
+  return (
+    <>
+      {parts.map((part, i) => {
+        if (/^[A-Z0-9]+_[A-Z0-9_]+$/.test(part)) {
+          return <span key={i} className="font-mono text-[11.5px] font-bold text-sky-300 bg-sky-900/20 px-1 py-0.5 rounded mx-0.5 whitespace-nowrap">{part}</span>;
+        }
+        return part;
+      })}
+    </>
+  );
+}
+
 function SectionBody({ section }) {
   const items = listFromValue(section.body);
   const isList = section.label === 'EVIDENCE' || items.length > 1;
 
   return (
-    <div className="rounded-md border border-zinc-800 bg-zinc-950/35 px-2 py-1.5">
+    <div className="glass-inset rounded-xl px-3 py-2">
       <span className="text-[10px] font-semibold uppercase tracking-wide text-zinc-500">{section.label}</span>
       {isList ? (
         <div className="mt-1 space-y-1">
           {items.map((item, index) => (
-            <p key={index} className="text-[11px] leading-snug text-zinc-300 break-words">{item}</p>
+            <p key={index} className="text-[11px] leading-snug text-zinc-300 break-words"><FormatProse text={item} /></p>
           ))}
         </div>
       ) : (
-        <p className="mt-1 text-[11px] leading-snug text-zinc-300 break-words">{section.body}</p>
+        <p className="mt-1 text-[11px] leading-snug text-zinc-300 break-words"><FormatProse text={section.body} /></p>
       )}
     </div>
   );
@@ -209,7 +224,7 @@ function MessageBody({ msg }) {
     return (
       <div className="space-y-2 min-w-0">
         {leadTxt && (
-          <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">{leadTxt}</p>
+        <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">{leadTxt}</p>
         )}
         <StructuredJson data={json} />
       </div>
@@ -224,11 +239,11 @@ function MessageBody({ msg }) {
     return (
       <div className="space-y-2 min-w-0">
         <div className="flex flex-wrap items-center gap-1.5">
-          <span className="rounded border border-zinc-700 bg-zinc-950 px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-100">
+          <span className="black-button rounded-xl px-2 py-1 text-[10px] font-bold uppercase tracking-wide text-zinc-100">
             {title}
           </span>
           {chips.slice(0, 12).map((chip, index) => (
-            <span key={`${chip}-${index}`} className={`rounded border px-1.5 py-0.5 text-[10px] font-mono ${tokenClass(chip)}`}>
+            <span key={`${chip}-${index}`} className={`forensic-token rounded-full border px-2 py-0.5 text-[10px] ${tokenClass(chip)}`}>
               {chip}
             </span>
           ))}
@@ -246,7 +261,7 @@ function MessageBody({ msg }) {
   return (
     <div className="space-y-2 min-w-0">
       {lead && (
-        <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words">{lead}</p>
+        <p className="text-[13px] text-zinc-200 leading-relaxed whitespace-pre-wrap break-words"><FormatProse text={lead} /></p>
       )}
       {sections.length > 0 && (
         <div className="space-y-1.5">
@@ -328,20 +343,20 @@ export default function EnterpriseChat() {
   return (
     <div className="flex flex-col h-full panel-card overflow-hidden">
       {/* Header */}
-      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800">
+      <div className="relative z-10 flex items-center justify-between px-3 py-2 border-b border-white/10">
         <div className="flex items-center gap-2">
-          <svg className="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-3.5 h-3.5 text-blue-300" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
             <path d="M2 4h12v8a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1V4z" />
             <path d="M2 4l6 4 6-4" />
           </svg>
-          <span className="text-xs font-semibold text-zinc-300">AI Chat</span>
-          <span className="text-[10px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 font-mono">
+          <span className="text-xs font-semibold prism-title">AI Chat</span>
+          <span className="black-button text-[10px] px-2 py-0.5 rounded-full text-zinc-400 forensic-token">
             {messages.length} msgs
           </span>
         </div>
         <div className="flex items-center gap-2">
           {showTaskSwitcher && (
-            <div className="flex items-center gap-1 rounded-md border border-zinc-800 bg-zinc-900/70 p-1">
+            <div className="flex items-center gap-1 rounded-xl glass-inset p-1">
               {taskButtons.map((button) => {
                 const isSelected = selectedTaskView === button.key;
                 const isEnabled = availableTasks.has(button.key);
@@ -353,9 +368,9 @@ export default function EnterpriseChat() {
                     onClick={() => isEnabled && dispatch({ type: 'SELECT_TASK_VIEW', payload: button.key })}
                     className={`px-2 py-1 rounded text-[10px] font-mono transition-colors ${
                       isSelected
-                        ? 'bg-emerald-950/60 text-emerald-300 border border-emerald-500/30'
+                        ? 'prism-button text-white'
                         : isEnabled
-                        ? 'bg-zinc-800 text-zinc-300 border border-zinc-700 hover:bg-zinc-700'
+                        ? 'black-button text-zinc-300'
                         : 'text-zinc-600 cursor-not-allowed'
                     }`}
                   >
@@ -375,7 +390,7 @@ export default function EnterpriseChat() {
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="bg-amber-900/20 border-b border-amber-800/50 px-3 py-2 overflow-hidden"
+            className="bg-amber-900/20 border-b border-amber-400/20 px-3 py-2 overflow-hidden"
           >
             <div className="flex items-center gap-2 mb-1">
               <svg className="w-3.5 h-3.5 text-amber-400" viewBox="0 0 16 16" fill="currentColor">
@@ -393,12 +408,12 @@ export default function EnterpriseChat() {
               <div className="bg-zinc-900/80 rounded p-2 border border-amber-800/30">
                 <span className="text-amber-400 font-mono">{disagreement.position2?.agent}</span>
                 <p className="text-zinc-400 mt-0.5">{disagreement.position2?.action}</p>
-                <p className="text-emerald-400 font-mono mt-0.5">{disagreement.position2?.cost}</p>
+                <p className="text-sky-200 font-mono mt-0.5">{disagreement.position2?.cost}</p>
               </div>
             </div>
             {disagreement.resolution && (
-              <p className="text-emerald-400 text-[10px] mt-1 font-mono">
-                <span className="text-emerald-500 mr-1">[RESOLVED]</span>
+              <p className="text-sky-200 text-[10px] mt-1 font-mono">
+                <span className="text-cyan-300 mr-1">[REPORT READY]</span>
                 {disagreement.resolution}
               </p>
             )}
@@ -420,9 +435,9 @@ export default function EnterpriseChat() {
               <div className="flex items-start gap-3">
                 {/* Agent Avatar — gradient tile with ring */}
                 <div
-                  className="w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg"
+                  className="w-9 h-9 rounded-2xl flex items-center justify-center shrink-0 mt-0.5 shadow-lg"
                   style={{
-                    background: `linear-gradient(135deg, ${(msg.agent.color || '#71717a')}33, ${(msg.agent.color || '#71717a')}0d)`,
+                    background: `linear-gradient(135deg, ${(msg.agent.color || '#71717a')}38, rgba(96,165,250,0.08))`,
                     border: `1px solid ${msg.agent.color || '#71717a'}55`,
                     boxShadow: `0 0 12px ${msg.agent.color || '#71717a'}18`,
                   }}
@@ -433,19 +448,19 @@ export default function EnterpriseChat() {
                 <div className="flex-1 min-w-0">
                   {/* Agent Name + Timestamp */}
                   <div className="flex items-center gap-2 mb-1.5">
-                    <span className="font-display text-[13.5px] font-semibold tracking-tight" style={{ color: msg.agent.color || '#71717a' }}>
+                    <span className="font-display text-[13.5px] font-semibold tracking-tight text-zinc-100">
                       {msg.agent.name || msg.agent.id || 'Agent'}
                     </span>
-                    <span className="text-[9px] text-zinc-600 font-mono tabular-nums">{msg.timestamp}</span>
+                    <span className="text-[9px] text-zinc-600 forensic-token tabular-nums">{msg.timestamp}</span>
                     {msg.points !== undefined && msg.points !== 0 && (
-                      <span className={`text-[10px] font-mono px-1.5 py-0.5 rounded ${msg.points > 0 ? 'bg-emerald-900/30 text-emerald-400' : 'bg-red-900/30 text-red-500'}`}>
+                      <span className={`text-[10px] forensic-token px-1.5 py-0.5 rounded-full ${msg.points > 0 ? 'bg-sky-500/15 text-sky-200' : 'bg-red-500/15 text-red-300'}`}>
                         {msg.points > 0 ? '+' : ''}{msg.points.toFixed(2)} pts
                       </span>
                     )}
                     {msg.think && (
                       <button
                         onClick={() => toggleThink(msg.id)}
-                        className="text-[9px] px-1.5 py-0.5 rounded bg-zinc-800 text-zinc-500 hover:text-zinc-300 hover:bg-zinc-700 transition-colors font-mono"
+                        className="black-button text-[9px] px-2 py-0.5 rounded-full text-zinc-400 hover:text-zinc-200 transition-colors forensic-token"
                       >
                         {expandedThink[msg.id] ? 'HIDE REASONING' : 'REASONING'}
                       </button>
@@ -454,10 +469,10 @@ export default function EnterpriseChat() {
 
                   {/* Message Content — human-readable only */}
                   <div
-                    className="rounded-xl border border-zinc-800/70 border-l-[3px] px-3.5 py-3 transition-all duration-200 group-hover:border-zinc-700/80"
+                    className="glass-inset rounded-2xl border-l-[3px] px-3.5 py-3 transition-all duration-200 group-hover:border-blue-300/25"
                     style={{
                       borderLeftColor: (msg.agent.color || '#71717a') + 'cc',
-                      background: 'linear-gradient(180deg, rgba(39,39,42,0.35), rgba(24,24,27,0.25))',
+                      background: 'linear-gradient(180deg, rgba(255,255,255,0.06), rgba(10,12,20,0.36))',
                     }}
                   >
                     <MessageBody msg={msg} />
@@ -473,10 +488,10 @@ export default function EnterpriseChat() {
                         transition={{ duration: 0.2 }}
                         className="overflow-hidden"
                       >
-                        <div className="mt-1.5 p-2 rounded bg-purple-900/10 border border-purple-800/20">
-                          <span className="text-[9px] text-purple-400 font-mono block mb-1">{'<think>'}</span>
+                        <div className="mt-1.5 p-2 rounded-xl glass-inset">
+                          <span className="text-[9px] text-violet-300 forensic-token block mb-1">{'<think>'}</span>
                           <p className="text-[10px] text-zinc-400 leading-relaxed italic">{(msg.think || '').replace(/\*\*/g, '').replace(/\*/g, '')}</p>
-                          <span className="text-[9px] text-purple-400 font-mono block mt-1">{'</think>'}</span>
+                          <span className="text-[9px] text-violet-300 forensic-token block mt-1">{'</think>'}</span>
                         </div>
                       </motion.div>
                     )}
@@ -492,68 +507,68 @@ export default function EnterpriseChat() {
             initial={{ opacity: 0, y: 8 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.3, delay: 0.1 }}
-            className="mt-3 rounded-lg border border-emerald-500/30 bg-gradient-to-b from-emerald-950/40 to-zinc-900/80 overflow-hidden"
+            className="mt-3 rounded-2xl glass-surface overflow-hidden"
           >
-            <div className="px-4 py-2 bg-emerald-500/10 border-b border-emerald-500/20 flex items-center gap-2">
-              <div className="w-2 h-2 rounded-full bg-emerald-400" />
-              <span className="text-[11px] font-bold text-emerald-300 uppercase tracking-widest">Incident Summary</span>
-              <span className="ml-auto text-[9px] font-mono text-emerald-500/70">
-                {scenarioContext?.source === 'inference_cli' ? 'inference.py complete' : 'Orchestration complete'}
+            <div className="relative z-10 px-4 py-2 bg-blue-500/10 border-b border-white/10 flex items-center gap-2">
+              <div className="w-2 h-2 rounded-full bg-blue-300" />
+              <span className="text-[11px] font-bold prism-title uppercase tracking-widest">Run Summary</span>
+              <span className="ml-auto text-[9px] forensic-token text-blue-200/70">
+                {scenarioContext?.source === 'inference_cli' ? 'inference.py report ready' : 'report ready'}
               </span>
             </div>
-            <div className="px-4 py-3">
+            <div className="relative z-10 px-4 py-3">
               <table className="w-full text-[10px]">
                 <tbody>
-                  <tr className="border-b border-zinc-800/50">
+                  <tr className="border-b border-white/10">
                     <td className="py-1.5 text-zinc-500 font-medium w-28">Status</td>
-                    <td className="py-1.5"><span className="px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-400 font-bold text-[9px]">RESOLVED</span></td>
+                    <td className="py-1.5"><span className="black-button px-2 py-0.5 rounded-full text-blue-100 font-bold text-[9px]">REPORT READY</span></td>
                   </tr>
                   {verdict && (
-                    <tr className="border-b border-zinc-800/50">
+                    <tr className="border-b border-white/10">
                       <td className="py-1.5 text-zinc-500 font-medium">Threat Level</td>
-                      <td className="py-1.5"><span className={`font-bold font-mono ${THREAT_TXT[verdict.level] || 'text-zinc-300'}`}>{verdict.level || '—'}</span></td>
+                      <td className="py-1.5"><span className={`font-bold forensic-token ${THREAT_TXT[verdict.level] || 'text-zinc-300'}`}>{verdict.level || '—'}</span></td>
                     </tr>
                   )}
                   {verdict?.family && (
-                    <tr className="border-b border-zinc-800/50">
+                    <tr className="border-b border-white/10">
                       <td className="py-1.5 text-zinc-500 font-medium">Malware Family</td>
-                      <td className="py-1.5 text-zinc-200 font-mono">{verdict.family}</td>
+                      <td className="py-1.5 text-zinc-200 forensic-token">{verdict.family}</td>
                     </tr>
                   )}
                   {verdict?.flags?.length > 0 && (
-                    <tr className="border-b border-zinc-800/50">
+                    <tr className="border-b border-white/10">
                       <td className="py-1.5 text-zinc-500 font-medium align-top">Indicators Found</td>
                       <td className="py-1.5">
                         <div className="flex flex-wrap gap-1">
                           {verdict.flags.map((f, i) => (
-                            <span key={i} className="px-1.5 py-0.5 rounded bg-red-500/15 text-red-400 font-mono text-[9px]">{f}</span>
+                            <span key={i} className="forensic-token px-1.5 py-0.5 rounded-full bg-fuchsia-500/15 text-fuchsia-200 text-[9px]">{f}</span>
                           ))}
                         </div>
                       </td>
                     </tr>
                   )}
-                  <tr className="border-b border-zinc-800/50">
+                  <tr className="border-b border-white/10">
                     <td className="py-1.5 text-zinc-500 font-medium">Steps Taken</td>
-                    <td className="py-1.5 text-zinc-300 font-mono">{messages.length}</td>
+                    <td className="py-1.5 text-zinc-300 forensic-token">{messages.length}</td>
                   </tr>
-                  <tr className="border-b border-zinc-800/50">
+                  <tr className="border-b border-white/10">
                     <td className="py-1.5 text-zinc-500 font-medium">Final Score</td>
-                    <td className="py-1.5 text-emerald-400 font-bold font-mono">{totalReward.toFixed(3)}</td>
+                    <td className="py-1.5 text-blue-200 font-bold forensic-token">{totalReward.toFixed(3)}</td>
                   </tr>
-                  <tr className="border-b border-zinc-800/50">
+                  <tr className="border-b border-white/10">
                     <td className="py-1.5 text-zinc-500 font-medium">AI Cost</td>
-                    <td className="py-1.5 text-zinc-300 font-mono">${spent.toFixed(4)}</td>
+                    <td className="py-1.5 text-zinc-300 forensic-token">${spent.toFixed(4)}</td>
                   </tr>
-                  <tr className="border-b border-zinc-800/50">
+                  <tr className="border-b border-white/10">
                     <td className="py-1.5 text-zinc-500 font-medium">Budget Left</td>
-                    <td className="py-1.5 text-zinc-300 font-mono">${(budget - spent).toFixed(3)}</td>
+                    <td className="py-1.5 text-zinc-300 forensic-token">${(budget - spent).toFixed(3)}</td>
                   </tr>
                   <tr>
                     <td className="py-1.5 text-zinc-500 font-medium align-top">Rewards</td>
-                    <td className="py-1.5 font-mono text-[9px] leading-relaxed">
+                    <td className="py-1.5 forensic-token text-[9px] leading-relaxed">
                       <div className="flex flex-wrap gap-1">
                         {rewardFeed.length > 0 ? rewardFeed.map((r, i) => (
-                          <span key={i} className={`px-1 py-0.5 rounded ${r.value >= 0 ? 'bg-emerald-500/15 text-emerald-400' : 'bg-red-500/15 text-red-400'}`}>
+                          <span key={i} className={`px-1.5 py-0.5 rounded-full ${r.value >= 0 ? 'bg-blue-500/15 text-blue-200' : 'bg-red-500/15 text-red-300'}`}>
                             {r.value >= 0 ? '+' : ''}{r.value.toFixed(2)}
                           </span>
                         )) : <span className="text-zinc-600">—</span>}

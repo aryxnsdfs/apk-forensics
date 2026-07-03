@@ -94,6 +94,31 @@ class InferenceEngine:
                 "error": str(exc),
             }
 
+    def _resolve_runtime_model(self, model_key: str, configured_runtime_model: Optional[str] = None) -> str:
+        """
+        LM Studio expects one of its loaded runtime model IDs, which may differ
+        from our internal config keys.
+        """
+        runtime = self._probe_local_runtime()
+        if not runtime.get("reachable"):
+            return configured_runtime_model or model_key
+
+        loaded_models = runtime.get("models") or []
+        if configured_runtime_model and configured_runtime_model in loaded_models:
+            return configured_runtime_model
+
+        if not loaded_models or model_key in loaded_models:
+            return model_key
+
+        selected_model = runtime.get("default_model") or loaded_models[0]
+        logger.warning(
+            "Configured model '%s' is not loaded in LM Studio; using runtime model '%s'. Loaded models=%s",
+            model_key,
+            selected_model,
+            loaded_models,
+        )
+        return selected_model
+
     def generate(
         self,
         prompt: str,
@@ -114,12 +139,13 @@ class InferenceEngine:
 
         model_info = self.config.get_model_for_agent(agent_role)
         model_key = model_info["model_key"]
+        runtime_model = model_info.get("lm_studio_model_id")
 
         if self.mock_mode:
             return self._mock_generate(prompt, agent_role, model_key)
 
         # Production path: Unsloth inference
-        return self._unsloth_generate(prompt, agent_role, model_key, system_prompt, max_tokens, temperature)
+        return self._unsloth_generate(prompt, agent_role, model_key, runtime_model, system_prompt, max_tokens, temperature)
 
     def _mock_generate(self, prompt: str, agent_role: str, model_key: str) -> dict:
         """Mock inference for development — returns incident-aware placeholder responses."""
@@ -194,7 +220,7 @@ class InferenceEngine:
         }
 
     def _unsloth_generate(
-        self, prompt: str, agent_role: str, model_key: str,
+        self, prompt: str, agent_role: str, model_key: str, configured_runtime_model: Optional[str],
         system_prompt: str, max_tokens: int, temperature: float,
     ) -> dict:
         """
@@ -204,6 +230,7 @@ class InferenceEngine:
         if system_prompt:
             messages.append({"role": "system", "content": system_prompt})
         messages.append({"role": "user", "content": prompt})
+        runtime_model = self._resolve_runtime_model(model_key, configured_runtime_model)
 
         # Hit the Local GGUF Server (LM Studio default port is 1234)
         # timeout=(connect_s, read_s): fail fast if LM Studio is offline (5s),
@@ -212,6 +239,7 @@ class InferenceEngine:
             response = requests.post(
                 f"{LOCAL_LM_STUDIO_URL}/chat/completions",
                 json={
+                    "model": runtime_model,
                     "messages": messages,
                     "temperature": temperature,
                     "max_tokens": max_tokens,
@@ -224,22 +252,35 @@ class InferenceEngine:
             
             ai_text = data['choices'][0]['message']['content']
             tokens_used = data.get('usage', {}).get('completion_tokens', len(ai_text.split()))
-            runtime_model = data.get("model") or model_key
+            response_model = data.get("model") or runtime_model
             logger.info(
                 "Live generation: agent=%s configured_model=%s runtime_model=%s endpoint=%s tokens=%s",
                 agent_role,
                 model_key,
-                runtime_model,
+                response_model,
                 LOCAL_LM_STUDIO_URL,
                 tokens_used,
             )
 
             return {
                 "response": ai_text,
-                "model_used": runtime_model,
+                "model_used": response_model,
                 "tokens_generated": tokens_used,
                 "think_block": f"[Generated securely on local PC via GGUF]",
             }
+        except requests.HTTPError as e:
+            status = e.response.status_code if e.response is not None else "unknown"
+            body = e.response.text if e.response is not None else ""
+            logger.error(
+                "Local GGUF server returned HTTP %s at %s using model '%s': %s",
+                status,
+                LOCAL_LM_STUDIO_URL,
+                runtime_model,
+                body[:1000],
+            )
+            fallback = self._mock_generate(prompt, agent_role, model_key)
+            fallback["think_block"] = f"[Local GGUF unavailable: HTTP {status}] Deterministic fallback response generated."
+            return fallback
         except Exception as e:
             logger.error("Failed to connect to local GGUF server at %s: %s", LOCAL_LM_STUDIO_URL, e)
             # Fall back to deterministic, incident-aware mock output so the app stays usable
@@ -259,3 +300,4 @@ class InferenceEngine:
         if model_key in self._loaded_models:
             del self._loaded_models[model_key]
             print(f"[InferenceEngine] Model '{model_key}' unloaded")
+

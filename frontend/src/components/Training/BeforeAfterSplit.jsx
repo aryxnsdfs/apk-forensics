@@ -4,19 +4,19 @@ function MetricRow({ label, value, valueClass = 'text-zinc-200' }) {
   return (
     <div className="flex items-start justify-between gap-3 py-0.5 min-w-0">
       <span className="text-[11px] text-zinc-500 shrink-0">{label}</span>
-      <span className={`min-w-0 text-[11px] font-mono text-right leading-snug break-words ${valueClass}`}>{value}</span>
+      <span className={`min-w-0 text-[11px] forensic-token text-right leading-snug break-words ${valueClass}`}>{value}</span>
     </div>
   );
 }
 
 function Panel({ accent, title, children, badge }) {
   return (
-    <div className={`panel-card p-3 border ${accent} flex flex-col gap-2.5 h-full min-h-0`}>
-      <div className="flex items-center gap-2 shrink-0 pb-1.5 border-b border-zinc-800/60">
+    <div className={`panel-card p-3 border ${accent} flex flex-col gap-2.5 h-full min-h-[260px]`}>
+      <div className="relative z-10 flex items-center gap-2 shrink-0 pb-1.5 border-b border-white/10">
         <span className={`w-2 h-2 rounded-full ${badge}`} />
-        <span className="text-[10px] font-semibold uppercase tracking-wider text-zinc-200">{title}</span>
+        <span className="text-[10px] font-semibold uppercase tracking-wider prism-title">{title}</span>
       </div>
-      <div className="flex-1 min-h-0 pr-0.5 flex flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
+      <div className="relative z-10 flex-1 min-h-0 pr-0.5 flex flex-col gap-2 overflow-y-auto overflow-x-hidden scrollbar-thin scrollbar-thumb-zinc-800 scrollbar-track-transparent">
         {children}
       </div>
     </div>
@@ -39,8 +39,8 @@ export default function BeforeAfterSplit() {
   } = useSimulationState();
 
   const THREAT_CLR = {
-    THREAT_BENIGN: 'text-emerald-400 font-bold',
-    THREAT_LOW: 'text-emerald-400 font-bold',
+    THREAT_BENIGN: 'text-blue-200 font-bold',
+    THREAT_LOW: 'text-blue-200 font-bold',
     THREAT_MEDIUM: 'text-amber-400 font-bold',
     THREAT_HIGH: 'text-red-400 font-bold',
   };
@@ -59,22 +59,22 @@ export default function BeforeAfterSplit() {
   const isResolved = scenarioComplete || Boolean(chosenRun);
   const closureOutcome =
     counterfactual?.actual?.outcome ||
-    (isResolved ? 'RESOLVED' : 'IN_PROGRESS');
+    (isResolved ? 'REPORT READY' : 'IN_PROGRESS');
   const isIncomplete = closureOutcome === 'INCOMPLETE';
   const outcomeClass = isIncomplete
     ? 'text-red-400 font-bold'
     : isResolved
-    ? 'text-emerald-400 font-bold'
+    ? 'text-blue-200 font-bold'
     : 'text-zinc-400 font-bold';
 
   const closureNote = isResolved
-    ? 'Success: The incident closed with validator-backed evidence, cost tracking, and replayable execution logs.'
-    : 'Pending: Awaiting Chief Security Officer final report validation.';
+    ? 'Report ready: validator-backed evidence, cost tracking, and replayable execution logs are available.'
+    : 'Pending: awaiting final report validation.';
 
   return (
     <div
       className="grid gap-3 h-full min-h-0"
-      style={{ gridTemplateColumns: 'repeat(3, minmax(0, 1fr))' }}
+      style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))' }}
     >
 
       {/* ── Phase 1: Incident Trigger ── */}
@@ -82,12 +82,12 @@ export default function BeforeAfterSplit() {
         <p className="text-[11px] text-zinc-300 leading-relaxed">
           {scenarioContext?.incident_summary || 'Waiting for APK ingestion footprint...'}
         </p>
-        <div className="flex flex-col gap-0.5 pt-2 border-t border-zinc-800/60">
+        <div className="flex flex-col gap-0.5 pt-2 border-t border-white/10">
           <MetricRow label="Task Context"      value={scenarioContext?.title     || '—'} valueClass="text-red-400 font-bold" />
           <MetricRow label="Primary Objective" value={scenarioContext?.objective || '—'} valueClass="text-zinc-300" />
           <MetricRow
             label="System State"
-            value={scenarioComplete ? 'Incident Reproduced' : 'Live Evidence Trace Active'}
+            value={scenarioComplete ? 'Evidence captured' : 'Live evidence trace active'}
             valueClass="text-red-400"
           />
         </div>
@@ -97,7 +97,7 @@ export default function BeforeAfterSplit() {
       <Panel accent="border-blue-500/20" badge="bg-blue-500" title="Phase 2: Forensic Verify">
         <div className="flex flex-col gap-0.5">
           <MetricRow label="Analysis Pipeline" value={validator.validation_label || runtime.label || '—'} valueClass="text-blue-300" />
-          <MetricRow label="Pass Status"     value={validator.status || telemetry.last_validator_status || 'pending'} valueClass="text-emerald-400 font-bold" />
+          <MetricRow label="Pass Status"     value={validator.status || telemetry.last_validator_status || 'pending'} valueClass="text-blue-200 font-bold" />
           <MetricRow
             label="Applied Checks"
             value={checksApplied.length ? checksApplied.join(', ') : 'Waiting for validator output...'}
@@ -107,19 +107,19 @@ export default function BeforeAfterSplit() {
             <MetricRow
               label="Peak VRAM"
               value={validator.vram_peak_mb ? `${validator.vram_peak_mb}MB` : 'Pending'}
-              valueClass="text-emerald-300"
+              valueClass="text-blue-200"
             />
           ) : (
             <MetricRow label="Extraction Mode" value="Pure-Python Androguard Pipeline" valueClass="text-zinc-400" />
           )}
         </div>
-        <div className="rounded-md border border-zinc-800 bg-zinc-950/60 px-2.5 py-2 text-[10px] text-zinc-400 leading-relaxed font-mono mt-1">
+        <div className="code-prism rounded-xl px-2.5 py-2 text-[10px] text-zinc-400 leading-relaxed forensic-token mt-1">
           {validator.validator_detail || telemetry.validator_detail || runtime.detail || 'Forensic verification indicators will populate here upon payload execution.'}
         </div>
       </Panel>
 
       {/* ── Phase 3: Incident Outcome ── */}
-      <Panel accent="border-emerald-500/20" badge="bg-emerald-500" title="Phase 3: Detected Outcome">
+      <Panel accent="border-blue-300/20" badge="bg-blue-300" title="Phase 3: Detected Outcome">
         <div className="flex flex-col gap-0.5">
           <MetricRow
             label="Analysis Verdict"
@@ -142,7 +142,7 @@ export default function BeforeAfterSplit() {
             valueClass="text-amber-300 font-bold"
           />
         </div>
-        <div className="rounded-md border border-emerald-500/30 bg-emerald-500/5 px-2.5 py-2 text-[10px] text-zinc-300 leading-relaxed italic mt-1">
+        <div className="glass-inset rounded-xl px-2.5 py-2 text-[10px] text-zinc-300 leading-relaxed italic mt-1">
           {closureNote}
         </div>
       </Panel>

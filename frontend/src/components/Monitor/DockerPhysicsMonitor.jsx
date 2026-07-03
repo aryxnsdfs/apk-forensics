@@ -10,15 +10,15 @@ const GAUGES = [
 function getGaugeColor(value, thresholds) {
   if (value >= thresholds.crit) return { bar: 'bg-red-500',    text: 'text-red-400'     };
   if (value >= thresholds.warn) return { bar: 'bg-amber-500',  text: 'text-amber-400'   };
-  return                               { bar: 'bg-emerald-500', text: 'text-emerald-400' };
+  return                               { bar: 'bg-blue-400', text: 'text-blue-200' };
 }
 
 const STATUS_MAP = {
   idle:     { label: 'IDLE',     color: 'bg-zinc-500',    pulse: false },
-  running:  { label: 'RUNNING',  color: 'bg-emerald-500', pulse: true  },
+  running:  { label: 'RUNNING',  color: 'bg-blue-400', pulse: true  },
   warning:  { label: 'WARNING',  color: 'bg-amber-500',   pulse: true  },
   critical: { label: 'CRITICAL', color: 'bg-red-500',     pulse: true  },
-  stable:   { label: 'STABLE',   color: 'bg-emerald-500', pulse: false },
+  stable:   { label: 'STABLE',   color: 'bg-blue-400', pulse: false },
 };
 
 // Tag → colour mapping for structured think lines
@@ -27,7 +27,7 @@ const TAG_COLOURS = {
   '[METRICS]':    'text-violet-400',
   '[CONSTRAINT]': 'text-amber-400',
   '[ANALYSIS]':   'text-zinc-300',
-  '[DECISION]':   'text-emerald-400',
+  '[DECISION]':   'text-blue-300',
 };
 
 function extractTraceJson(text) {
@@ -50,9 +50,9 @@ function extractTraceJson(text) {
 function traceTokenClass(token) {
   if (/^THREAT_(HIGH|CRITICAL)/i.test(token)) return 'border-red-500/30 bg-red-500/10 text-red-300';
   if (/^THREAT_MEDIUM/i.test(token)) return 'border-amber-500/30 bg-amber-500/10 text-amber-300';
-  if (/^FLAG_/i.test(token)) return 'border-red-500/20 bg-red-500/10 text-red-300';
+  if (/^FLAG_/i.test(token)) return 'border-fuchsia-400/20 bg-fuchsia-500/10 text-fuchsia-200';
   if (/SMS|INTERNET|READ_|RECEIVE_/i.test(token)) return 'border-sky-500/20 bg-sky-500/10 text-sky-300';
-  return 'border-zinc-800 bg-zinc-950 text-zinc-400';
+  return 'border-white/10 bg-black/30 text-zinc-400';
 }
 
 function TraceProtocol({ text }) {
@@ -61,11 +61,11 @@ function TraceProtocol({ text }) {
 
   return (
     <div className="flex flex-wrap gap-1">
-      <span className="rounded border border-zinc-700 bg-zinc-950 px-1.5 py-0.5 text-[8px] font-bold text-zinc-200">
+      <span className="black-button rounded px-1.5 py-0.5 text-[8px] font-bold text-zinc-200">
         {parts[0]}
       </span>
       {parts.slice(1, 8).map((part, index) => (
-        <span key={`${part}-${index}`} className={`rounded border px-1 py-0.5 text-[8px] ${traceTokenClass(part)}`}>
+        <span key={`${part}-${index}`} className={`forensic-token rounded-full border px-1.5 py-0.5 text-[8px] ${traceTokenClass(part)}`}>
           {part}
         </span>
       ))}
@@ -78,37 +78,37 @@ function TraceJsonSummary({ data }) {
   const mitigations = Array.isArray(data.mitigation) ? data.mitigation : [];
 
   return (
-    <div className="mt-1.5 rounded border border-zinc-800 bg-zinc-950/70 overflow-hidden">
-      <div className="grid grid-cols-2 gap-px bg-zinc-800/60">
+    <div className="code-prism mt-1.5 rounded-xl overflow-hidden">
+      <div className="grid grid-cols-2 gap-px bg-white/5">
         {data.threat_level && (
-          <div className="bg-[#0d0d0d] px-1.5 py-1">
+          <div className="bg-black/25 px-1.5 py-1">
             <span className="block text-[8px] text-zinc-600 uppercase">Threat</span>
             <span className="text-[9px] font-bold text-amber-300">{String(data.threat_level).replace('THREAT_', '')}</span>
           </div>
         )}
         {data.threat_score !== undefined && (
-          <div className="bg-[#0d0d0d] px-1.5 py-1">
+          <div className="bg-black/25 px-1.5 py-1">
             <span className="block text-[8px] text-zinc-600 uppercase">Score</span>
-            <span className="text-[9px] font-bold text-emerald-300">{data.threat_score}</span>
+            <span className="text-[9px] font-bold text-blue-200">{data.threat_score}</span>
           </div>
         )}
       </div>
       {indicators.slice(0, 3).map((item, index) => (
-        <div key={index} className="border-t border-zinc-800 px-1.5 py-1">
-          <span className="text-[8px] font-bold text-red-300">{typeof item === 'string' ? item : item.flag || `FINDING_${index + 1}`}</span>
+        <div key={index} className="border-t border-white/10 px-1.5 py-1">
+          <span className="forensic-token text-[8px] font-bold text-fuchsia-200">{typeof item === 'string' ? item : item.flag || `FINDING_${index + 1}`}</span>
           {typeof item !== 'string' && (
             <p className="text-[9px] leading-snug text-zinc-400 break-words">{item.detail || item.where || String(item)}</p>
           )}
         </div>
       ))}
       {data.rca && (
-        <div className="border-t border-zinc-800 px-1.5 py-1">
+        <div className="border-t border-white/10 px-1.5 py-1">
           <span className="text-[8px] font-bold text-zinc-500">RCA</span>
           <p className="text-[9px] leading-snug text-zinc-400 break-words">{data.rca}</p>
         </div>
       )}
       {mitigations.length > 0 && (
-        <div className="border-t border-zinc-800 px-1.5 py-1">
+        <div className="border-t border-white/10 px-1.5 py-1">
           <span className="text-[8px] font-bold text-zinc-500">MITIGATION</span>
           {mitigations.slice(0, 3).map((item, index) => (
             <p key={index} className="text-[9px] leading-snug text-zinc-400 break-words">{index + 1}. {item}</p>
@@ -130,7 +130,7 @@ function TraceEntryBody({ text }) {
         {afterTokens.length > 0 && (
           <div className="flex flex-wrap gap-1">
             {afterTokens.slice(0, 8).map((token, index) => (
-              <span key={`${token}-${index}`} className={`rounded border px-1 py-0.5 text-[8px] ${traceTokenClass(token)}`}>
+                <span key={`${token}-${index}`} className={`forensic-token rounded-full border px-1.5 py-0.5 text-[8px] ${traceTokenClass(token)}`}>
                 {token}
               </span>
             ))}
@@ -181,6 +181,9 @@ export default function DockerPhysicsMonitor() {
   const validatorMode   = lastValidatorResult?.validation_mode  || runtime.mode  || 'Local Air-Gapped';
   const validatorDetail = lastValidatorResult?.validator_detail || telemetry.validator_detail || runtime.detail
                           || 'Package signatures verified locally.';
+  const displayValidatorDetail = String(validatorDetail)
+    .replace(/static analysis complete:/i, 'Static analysis report:')
+    .replace(/\bcomplete\b/gi, 'ready');
 
   // ── Real APK forensic metrics (from the live pipeline) ──
   const sizeBytes = Number(fileSizeBytes) || 0;
@@ -195,7 +198,7 @@ export default function DockerPhysicsMonitor() {
   const threatBar =
     threatLevel === 'THREAT_HIGH' ? { bar: 'bg-red-500', text: 'text-red-400' }
     : threatLevel === 'THREAT_MEDIUM' ? { bar: 'bg-amber-500', text: 'text-amber-400' }
-    : { bar: 'bg-emerald-500', text: 'text-emerald-400' };
+    : { bar: 'bg-blue-400', text: 'text-blue-200' };
 
   const forensicMetrics = [
     { label: 'APK Size', value: sizeLabel },
@@ -216,13 +219,13 @@ export default function DockerPhysicsMonitor() {
         {/* Threat score gauge */}
         <div className="space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[10px] text-zinc-500 font-mono">THREAT SCORE</span>
-            <span className={`text-[10px] font-mono font-bold ${threatBar.text}`}>
+          <span className="text-[10px] text-zinc-500 forensic-token">THREAT SCORE</span>
+            <span className={`text-[10px] forensic-token font-bold ${threatBar.text}`}>
               {threatScore === null ? '—' : `${threatScore}/100`}
               {threatLevel ? ` · ${threatLevel.replace('THREAT_', '')}` : ''}
             </span>
           </div>
-          <div className="w-full h-1.5 bg-zinc-800 rounded-full overflow-hidden">
+          <div className="w-full h-1.5 bg-black/45 rounded-full overflow-hidden">
             <motion.div
               className={`h-full ${threatBar.bar} rounded-full`}
               animate={{ width: `${Math.min(Number(threatScore) || 0, 100)}%` }}
@@ -234,38 +237,30 @@ export default function DockerPhysicsMonitor() {
         {/* Metric rows */}
         <div className="grid grid-cols-2 gap-1.5 pt-0.5">
           {forensicMetrics.map((m) => (
-            <div key={m.label} className="rounded border border-zinc-800 bg-zinc-950/60 px-2 py-1.5">
+            <div key={m.label} className="glass-inset rounded-xl px-2 py-1.5">
               <span className="block text-[8px] text-zinc-600 uppercase tracking-wide">{m.label}</span>
-              <span className="text-[11px] font-mono font-bold text-zinc-200">{m.value}</span>
+              <span className="text-[11px] forensic-token font-bold text-zinc-200">{m.value}</span>
             </div>
           ))}
         </div>
       </div>
 
-      <div className="h-px bg-zinc-800" />
+      <div className="h-px bg-white/10" />
 
       {/* ── Analysis Engine ── */}
       <div className="space-y-1.5">
         <div className="flex items-center justify-between">
           <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">Analysis Engine</span>
-          <div className="flex items-center gap-1.5">
-            <div className={`w-1.5 h-1.5 rounded-full ${isPass ? 'bg-emerald-500' : 'bg-amber-500 status-dot-live'}`} />
-            <span className="text-[9px] font-mono text-zinc-500">{isPass ? 'COMPLETE' : 'SCANNING'}</span>
-          </div>
         </div>
         <div className="grid grid-cols-1 gap-1.5 text-[10px]">
           <InfoRow label="ENGINE" value={validatorLabel} />
           <InfoRow label="MODE"      value={validatorMode}  />
-          <InfoRow
-            label="STATUS"
-            value={validatorStatus.toUpperCase()}
-            valueClass={isPass ? 'text-emerald-400 font-bold' : 'text-zinc-400 font-bold'}
-          />
-          <InfoRow label="DETAIL" value={validatorDetail} valueClass="text-zinc-400" />
+
+          <InfoRow label="DETAIL" value={displayValidatorDetail} valueClass="text-zinc-400" />
         </div>
       </div>
 
-      <div className="h-px bg-zinc-800" />
+      <div className="h-px bg-white/10" />
 
       {/* ── Forensic Checks ── */}
       <div className="space-y-1.5">
@@ -294,10 +289,10 @@ function ContainerStatusBadge({ status }) {
 
 function PreFlightItem({ label, status }) {
   const icon  = status === null ? '○' : status ? '✓' : '✗';
-  const color = status === null ? 'text-zinc-600' : status ? 'text-emerald-400' : 'text-red-400';
+  const color = status === null ? 'text-zinc-600' : status ? 'text-blue-300' : 'text-red-300';
   return (
     <div className="flex items-center gap-1.5">
-      <span className={`text-xs font-mono ${color}`}>{icon}</span>
+      <span className={`text-xs forensic-token ${color}`}>{icon}</span>
       <span className="text-[10px] text-zinc-500">{label}</span>
     </div>
   );
@@ -305,9 +300,9 @@ function PreFlightItem({ label, status }) {
 
 function InfoRow({ label, value, valueClass = 'text-zinc-200' }) {
   return (
-    <div className="flex items-center justify-between gap-3 py-1 border-b border-zinc-800/60 last:border-b-0">
-      <span className="text-[9px] text-zinc-600 uppercase tracking-widest font-mono shrink-0">{label}</span>
-      <span className={`text-[10px] font-mono text-right break-words ${valueClass}`}>{value}</span>
+    <div className="flex items-center justify-between gap-3 py-1 border-b border-white/10 last:border-b-0">
+      <span className="text-[9px] text-zinc-600 uppercase tracking-widest forensic-token shrink-0">{label}</span>
+      <span className={`text-[10px] forensic-token text-right break-words ${valueClass}`}>{value}</span>
     </div>
   );
 }

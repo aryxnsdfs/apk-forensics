@@ -1,0 +1,14 @@
+{
+  "model": "unsloth/llama-3.1-8b-instruct-bnb-4bit",
+  "stages_run": [
+    "export"
+  ],
+  "checkpoints": {
+    "sft": false,
+    "grpo": true,
+    "dpo": false,
+    "merged": true,
+    "gguf": true
+  },
+  "finished": "2026-07-01T21:19:27.621195"
+}

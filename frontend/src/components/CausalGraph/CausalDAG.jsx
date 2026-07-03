@@ -5,11 +5,13 @@ import { useSimulationState } from '../../store/simulationStore';
 import CustomNode from './CustomNode';
 
 const nodeTypes = { custom: CustomNode };
-const COLUMN_WIDTH = 240;
-const ROW_HEIGHT = 120;
+const NODE_SPACING_X = 340; // horizontal gap between siblings
+const LAYER_SPACING_Y = 140; // vertical gap between causal depths
+const LAYOUT_MARGIN_X = 40;
+const LAYOUT_MARGIN_Y = 28;
 
-// Layered DAG layout: column = causal depth (longest path from a root),
-// rows stack siblings within a depth. Disconnected nodes land in column 0.
+// Top-down layered DAG: causal depth = vertical layer, siblings spread
+// horizontally and centered. Fills wide panels; disconnected nodes -> layer 0.
 function buildWrappedLayout(nodes, edges) {
   const indeg = new Map();
   const adj = new Map();
@@ -39,26 +41,30 @@ function buildWrappedLayout(nodes, edges) {
   }
   nodes.forEach((n) => { if (!seen.has(n.id)) order.push(n.id); });
 
-  // Assign a row index per depth column, then vertically center each column.
-  const rowByDepth = new Map();
-  const colRows = new Map();
-  const rawPos = new Map();
+  const layers = new Map();
   order.forEach((id) => {
     const d = depth.get(id) || 0;
-    const r = rowByDepth.get(d) || 0;
-    rowByDepth.set(d, r + 1);
-    rawPos.set(id, { d, r });
-    colRows.set(d, Math.max(colRows.get(d) || 0, r + 1));
+    if (!layers.has(d)) layers.set(d, []);
+    layers.get(d).push(id);
   });
-  const maxRows = Math.max(1, ...colRows.values());
+
+  const rawPos = new Map();
+  let minX = 0;
+  layers.forEach((layer, d) => {
+    const layerWidth = (layer.length - 1) * NODE_SPACING_X;
+    layer.forEach((id, index) => {
+      const x = index * NODE_SPACING_X - layerWidth / 2;
+      minX = Math.min(minX, x);
+      rawPos.set(id, { x, y: d * LAYER_SPACING_Y });
+    });
+  });
+  const xShift = LAYOUT_MARGIN_X - minX;
 
   return nodes.map((node) => {
-    const p = rawPos.get(node.id) || { d: 0, r: 0 };
-    const rowsInCol = colRows.get(p.d) || 1;
-    const yOffset = ((maxRows - rowsInCol) * ROW_HEIGHT) / 2; // center column
+    const p = rawPos.get(node.id) || { x: 0, y: 0 };
     return {
       ...node,
-      position: { x: 40 + p.d * COLUMN_WIDTH, y: 40 + yOffset + p.r * ROW_HEIGHT },
+      position: { x: xShift + p.x, y: LAYOUT_MARGIN_Y + p.y },
     };
   });
 }
@@ -83,10 +89,10 @@ export default function CausalDAG() {
     if (!reactFlowRef.current || layoutNodes.length === 0) return;
     const timeout = setTimeout(() => {
       reactFlowRef.current.fitView({
-        padding: 0.2,
+        padding: 0.12,
         duration: 300,
-        minZoom: 0.35,
-        maxZoom: 1.2,
+        minZoom: 0.28,
+        maxZoom: 1.45,
       });
     }, 50);
     return () => clearTimeout(timeout);
@@ -94,24 +100,24 @@ export default function CausalDAG() {
 
   return (
     <div className="panel-card h-full flex flex-col overflow-hidden">
-      <div className="flex items-center justify-between px-3 py-2 border-b border-zinc-800 shrink-0">
+      <div className="relative z-10 flex items-center justify-between px-3 py-2 border-b border-white/10 shrink-0">
         <div className="flex items-center gap-1.5">
-          <svg className="w-3.5 h-3.5 text-zinc-400" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
+          <svg className="w-3.5 h-3.5 text-blue-300" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.5">
             <circle cx="4" cy="4" r="2" />
             <circle cx="12" cy="12" r="2" />
             <circle cx="12" cy="4" r="2" />
             <line x1="6" y1="4" x2="10" y2="4" />
             <line x1="12" y1="6" x2="12" y2="10" />
           </svg>
-          <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
-            Causal Graph (DAG)
+          <span className="text-[10px] font-semibold prism-title uppercase tracking-wider">
+            Attack Graph
           </span>
         </div>
-        <span className="text-[9px] font-mono text-zinc-600">
+        <span className="text-[9px] forensic-token text-zinc-600">
           {causalNodes.length} nodes / {causalEdges.length} edges
         </span>
       </div>
-      <div className="flex-1 min-h-0">
+      <div className="relative z-10 flex-1 min-h-0">
         {causalNodes.length === 0 ? (
           <div className="flex flex-col items-center justify-center h-full text-zinc-600">
             <svg className="w-8 h-8 text-zinc-700 mb-2" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
@@ -121,7 +127,7 @@ export default function CausalDAG() {
               <line x1="7.5" y1="7.5" x2="10" y2="15.5" />
               <line x1="16.5" y1="7.5" x2="14" y2="15.5" />
             </svg>
-            <p className="text-[10px]">Causal chain builds during scenario...</p>
+            <p className="text-[10px] forensic-token">Attack graph builds during analysis...</p>
           </div>
         ) : (
           <ReactFlow
@@ -132,17 +138,16 @@ export default function CausalDAG() {
             onInit={(instance) => { reactFlowRef.current = instance; }}
             nodeTypes={nodeTypes}
             fitView
-            fitViewOptions={{ padding: 0.1, minZoom: 0.35, maxZoom: 1.5 }}
-            minZoom={0.3}
+            fitViewOptions={{ padding: 0.12, minZoom: 0.28, maxZoom: 1.45 }}
+            minZoom={0.25}
             maxZoom={2.0}
             nodesDraggable
             panOnDrag
             proOptions={{ hideAttribution: true }}
           >
-            <Background color="#27272a" gap={20} size={1} />
+            <Background color="rgba(147,197,253,0.16)" gap={22} size={1} />
             <Controls
               showInteractive={false}
-              style={{ backgroundColor: '#27272a', borderColor: '#3f3f46' }}
             />
           </ReactFlow>
         )}

@@ -5,14 +5,14 @@ import { useSimulationState } from '../../store/simulationStore';
 const AGENT_COLORS = {
   COMMANDER: 'text-blue-400',
   DETECTIVE: 'text-amber-400',
-  CODER:     'text-emerald-400',
+  CODER:     'text-sky-300',
   THREAT_INTEL: 'text-red-400',
 };
 
 const AGENT_LABELS = {
-  COMMANDER: 'Chief Security Officer',
-  DETECTIVE: 'Static Analyst',
-  CODER:     'Reverse Engineer',
+  COMMANDER: 'Verdict Engine',
+  DETECTIVE: 'Static Analysis',
+  CODER:     'Binary Review',
   THREAT_INTEL: 'Threat Intel',
 };
 
@@ -40,12 +40,12 @@ export default function RewardMathFeed() {
 
   return (
     <div className="panel-card p-3 flex flex-col h-full min-h-0">
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800/50">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest flex items-center gap-1.5">
-          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+      <div className="relative z-10 flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+        <span className="text-[10px] font-bold prism-title uppercase tracking-widest flex items-center gap-1.5">
+          <span className="w-1.5 h-1.5 rounded-full bg-blue-300 animate-pulse" />
           Real-Time Reward Feed
         </span>
-        <span className={`text-xs font-mono font-bold ${totalReward >= 0 ? 'text-emerald-400' : 'text-red-400'} px-2 py-0.5 rounded bg-zinc-950 border border-zinc-800`}>
+        <span className={`black-button text-xs forensic-token font-bold ${totalReward >= 0 ? 'text-blue-200' : 'text-red-300'} px-2 py-0.5 rounded-lg`}>
           Σ {(totalReward >= 0 ? '+' : '') + totalReward.toFixed(2)}
         </span>
       </div>
@@ -61,21 +61,21 @@ export default function RewardMathFeed() {
                 initial={{ opacity: 0, x: -8 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ duration: 0.15 }}
-                className="flex items-start gap-2 py-1.5 border-b border-zinc-900/40 last:border-0 min-w-0"
+                className="flex items-start gap-2 py-1.5 border-b border-white/5 last:border-0 min-w-0"
               >
                 <span className="text-zinc-700 shrink-0 select-none mt-0.5">↳</span>
                 <div className="flex-1 min-w-0 flex flex-col gap-0.5">
                   <div className="grid grid-cols-[minmax(0,1fr)_auto] items-start gap-2">
-                    <span className="min-w-0 text-[11px] font-mono tracking-wide leading-snug">
+                    <span className="min-w-0 text-[11px] forensic-token tracking-wide leading-snug">
                       <span className={`font-semibold ${agentColor(entry.agent)}`}>{agentLabel(entry.agent)}</span>
                       <span className="text-zinc-600 font-normal"> ▸ </span>
                       <span className="text-zinc-400 font-normal break-words">{entry.target}</span>
                     </span>
-                    <span className={`text-[12px] font-mono font-bold shrink-0 ${entry.value >= 0 ? 'text-emerald-400' : 'text-red-400'}`}>
+                    <span className={`text-[12px] forensic-token font-bold shrink-0 ${entry.value >= 0 ? 'text-blue-200' : 'text-red-300'}`}>
                       {(entry.value >= 0 ? '+' : '') + entry.value.toFixed(2)}
                     </span>
                   </div>
-                  <span className="text-zinc-600 text-[9px] font-mono">{entry.timestamp}</span>
+                  <span className="text-zinc-600 text-[9px] forensic-token">{entry.timestamp}</span>
                 </div>
               </motion.div>
             ))}
@@ -83,10 +83,10 @@ export default function RewardMathFeed() {
               <motion.div
                 initial={{ opacity: 0 }}
                 animate={{ opacity: 1 }}
-                className="mt-4 pt-3 border-t border-zinc-800 bg-emerald-950/5 p-2 rounded"
+                className="mt-4 pt-3 border-t border-white/10 bg-blue-500/10 p-2 rounded-xl"
               >
-                <span className="text-emerald-500 font-bold text-xs">
-                  [SUCCESS] Incident Closed. Total Σ {(totalReward >= 0 ? '+' : '') + totalReward.toFixed(2)}
+                <span className="text-blue-200 font-bold text-xs">
+                  [REPORT READY] Total Σ {(totalReward >= 0 ? '+' : '') + totalReward.toFixed(2)}
                 </span>
               </motion.div>
             )}

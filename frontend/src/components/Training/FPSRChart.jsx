@@ -2,10 +2,10 @@ import { useSimulationState } from '../../store/simulationStore';
 
 function EvidenceCard({ label, present, detail, accent }) {
   return (
-    <div className={`rounded-lg border p-3 ${present ? accent : 'border-zinc-800 bg-zinc-900/30'}`}>
+    <div className={`glass-inset rounded-2xl border p-3 ${present ? accent : 'border-white/10 bg-white/[0.03]'}`}>
       <div className="flex items-center justify-between gap-2">
         <span className="text-[10px] text-zinc-400 uppercase tracking-wider">{label}</span>
-        <span className={`text-[10px] font-mono font-bold ${present ? 'text-emerald-400' : 'text-zinc-500'}`}>
+        <span className={`forensic-token text-[10px] font-mono font-bold ${present ? 'text-sky-200' : 'text-zinc-500'}`}>
           {present ? 'CAPTURED' : (label === 'Rejected Baseline' ? 'NOT REQUIRED' : 'PENDING')}
         </span>
       </div>
@@ -21,12 +21,12 @@ export default function FPSRChart() {
   const totalCaptured = [rejectedRun, chosenRun, rcaDocument].filter(Boolean).length;
 
   return (
-    <div className="panel-card p-3 h-full flex flex-col">
+    <div className="glass-surface p-3 h-full flex flex-col">
       <div className="flex items-center justify-between mb-2">
-        <span className="text-[10px] font-semibold text-zinc-400 uppercase tracking-wider">
+        <span className="prism-title text-[10px] font-semibold uppercase tracking-wider">
           Outcome Snapshot
         </span>
-        <span className="text-[10px] font-mono text-emerald-400 font-bold">
+        <span className="forensic-token text-[10px] font-mono text-sky-200 font-bold">
           {totalCaptured === 0 ? 'Awaiting Evidence' : `${totalCaptured} sample${totalCaptured === 1 ? '' : 's'} captured`}
         </span>
       </div>
@@ -51,7 +51,7 @@ export default function FPSRChart() {
                 ? `Status ${chosenRun.status}. ${chosenRun.validator_detail || 'Passing validator evidence and remediation details were recorded successfully.'}`
                 : 'Waiting for a passing validator result to be recorded.'
             }
-            accent="border-emerald-900/50 bg-emerald-950/10"
+            accent="border-sky-400/30 bg-sky-500/10"
           />
           <EvidenceCard
             label="RCA Summary"
@@ -66,9 +66,9 @@ export default function FPSRChart() {
         </div>
       </div>
 
-      <div className="pt-2 border-t border-zinc-800 flex items-center justify-between">
+      <div className="pt-2 border-t border-white/10 flex items-center justify-between">
         <span className="text-[9px] text-zinc-500">Passing fix present</span>
-        <span className={`text-[10px] font-mono font-bold ${chosenRun ? 'text-emerald-400' : 'text-zinc-500'}`}>
+        <span className={`forensic-token text-[10px] font-mono font-bold ${chosenRun ? 'text-sky-200' : 'text-zinc-500'}`}>
           {chosenRun ? 'YES' : 'NO'}
         </span>
       </div>

@@ -23,7 +23,7 @@ repo_root_str = str(REPO_ROOT)
 if repo_root_str not in sys.path:
     sys.path.append(repo_root_str)
 
-from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File
+from fastapi import FastAPI, WebSocket, WebSocketDisconnect, UploadFile, File, Body
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, PlainTextResponse
 from fastapi.staticfiles import StaticFiles
@@ -3253,7 +3253,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
                " | REQ_CODE:" + (",".join(static_reqs) or "none"),
         "english": static_english,
         "think": static_think,
-        "points": 0.10,
+        "points": round(0.05 + len(dperms) * 0.04 + len(seed.get('suspicious_combos', [])) * 0.06, 2),
         "reward_target": "Static triage",
     }})
     for combo in seed.get("suspicious_combos", []):
@@ -3298,7 +3298,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "m2m": "REVERSE | " + (" ".join(rev_flags) or "NO_FLAG"),
         "english": rev_english,
         "think": rev_think,
-        "points": 0.20,
+        "points": round(0.08 + len(rev_flags) * 0.08 + len(seed.get('evidence', [])) * 0.04, 2),
         "reward_target": "Reverse engineering",
     }})
     for ev in seed.get("evidence", []):
@@ -3354,7 +3354,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
                f"{' '.join(verdict['indicators']) or 'NO_FLAGS'} | {verdict['eta']}",
         "english": cso_narrative + "\n" + json.dumps(verdict),
         "think": cso_think,
-        "points": 0.25,
+        "points": round(0.10 + seed.get('threat_score', 0) / 200, 2),
         "reward_target": "Verdict + RCA",
     }})
     await _record_causal_event("verdict", f"{verdict['threat_level']}: {verdict['malware_family']}",
@@ -3574,6 +3574,35 @@ async def analyze_apk(file: UploadFile = File(...)):
 
     scenario_task = asyncio.create_task(_run_apk_analysis(str(dest), safe_name))
     return {"status": "analyzing", "filename": safe_name, "size_bytes": len(content)}
+
+
+SAMPLES_DIR = Path(__file__).resolve().parent.parent / "samples"
+
+
+@app.get("/api/list-samples")
+async def list_samples():
+    """Return the list of available test APK samples."""
+    apks = []
+    if SAMPLES_DIR.is_dir():
+        for f in sorted(SAMPLES_DIR.iterdir()):
+            if f.suffix == ".apk":
+                apks.append({"filename": f.name, "size_bytes": f.stat().st_size})
+    return {"samples": apks}
+
+
+@app.post("/api/analyze-sample")
+async def analyze_sample(filename: str = Body(..., embed=True)):
+    """Analyze a pre-existing sample APK from the samples/ directory."""
+    global scenario_task
+    await _stop_scenario_task()
+
+    safe_name = os.path.basename(filename)
+    apk_path = SAMPLES_DIR / safe_name
+    if not apk_path.is_file():
+        return {"status": "error", "message": f"Sample {safe_name} not found"}
+
+    scenario_task = asyncio.create_task(_run_apk_analysis(str(apk_path), safe_name))
+    return {"status": "analyzing", "filename": safe_name, "size_bytes": apk_path.stat().st_size}
 
 
 @app.websocket("/ws")

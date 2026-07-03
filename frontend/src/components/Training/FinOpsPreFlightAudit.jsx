@@ -19,11 +19,11 @@ function parseStatus(value) {
 function getRowStyles(state, isFocused) {
   if (state === 'pass') {
     return {
-      border: 'border-emerald-500/40',
-      bg: 'bg-emerald-500/10',
-      text: 'text-emerald-300',
+      border: 'border-sky-400/40',
+      bg: 'bg-sky-500/10',
+      text: 'text-sky-200',
       mark: '✓',
-      markClass: 'text-emerald-300',
+      markClass: 'text-sky-200',
     };
   }
   if (state === 'fail') {
@@ -36,8 +36,8 @@ function getRowStyles(state, isFocused) {
     };
   }
   return {
-    border: isFocused ? 'border-blue-400/50' : 'border-zinc-800',
-    bg: isFocused ? 'bg-blue-500/10' : 'bg-zinc-900/60',
+    border: isFocused ? 'border-blue-400/50' : 'border-white/10',
+    bg: isFocused ? 'bg-blue-500/10' : 'bg-white/[0.04]',
     text: isFocused ? 'text-blue-300' : 'text-zinc-400',
     mark: '•',
     markClass: isFocused ? 'text-blue-300' : 'text-zinc-600',
@@ -137,16 +137,16 @@ export default function FinOpsPreFlightAudit() {
 
   const failed = checks.some((c) => c.state === 'fail');
   const passed = hasVerdict && validatorPass;
-  const gateLabel = failed ? 'BLOCKED' : passed ? 'CLEARED' : (isRunning ? 'SCANNING' : 'PENDING');
-  const gateClass = failed ? 'text-red-400 border-red-500/40' : passed ? 'text-emerald-400 border-emerald-500/40' : 'text-zinc-400 border-zinc-700';
+  const gateLabel = failed ? 'BLOCKED' : passed ? 'REPORT READY' : (isRunning ? 'ANALYZING' : 'PENDING');
+  const gateClass = failed ? 'text-red-300 border-red-500/40 bg-red-500/10' : passed ? 'text-sky-200 border-sky-400/40 bg-sky-400/10' : 'text-zinc-400 border-white/10 bg-white/[0.03]';
 
   return (
-    <div className="panel-card p-3 h-full min-h-0 flex flex-col">
-      <div className="flex items-center justify-between mb-3 pb-2 border-b border-zinc-800/60">
-        <span className="text-[10px] font-bold text-zinc-400 uppercase tracking-widest">
+    <div className="glass-surface p-3 h-full min-h-0 flex flex-col">
+      <div className="flex items-center justify-between mb-3 pb-2 border-b border-white/10">
+        <span className="prism-title text-[10px] font-bold uppercase tracking-widest">
           Forensic Pipeline Checks
         </span>
-        <span className={`text-[10px] px-2 py-0.5 border rounded font-mono font-bold ${gateClass}`}>
+        <span className={`text-[10px] px-2.5 py-1 border rounded-full font-mono font-bold shadow-[0_0_20px_rgba(96,165,250,0.18)] ${gateClass}`}>
           {gateLabel}
         </span>
       </div>
@@ -160,7 +160,7 @@ export default function FinOpsPreFlightAudit() {
               key={check.id}
               animate={isFocused ? { scale: [1, 1.01, 1], opacity: [0.85, 1, 0.9] } : { scale: 1, opacity: 1 }}
               transition={{ duration: 0.45, repeat: isFocused ? Infinity : 0 }}
-              className={`rounded-md border ${styles.border} ${styles.bg} px-2.5 py-2`}
+              className={`glass-inset rounded-xl border ${styles.border} ${styles.bg} px-2.5 py-2`}
             >
               <div className="flex items-center justify-between gap-2">
                 <span className={`min-w-0 text-[10px] font-semibold leading-snug break-words ${styles.text}`}>{check.label}</span>
