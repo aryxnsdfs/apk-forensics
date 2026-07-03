@@ -73,6 +73,7 @@ class VerdictReport(BaseModel):
     indicators: list[str] = Field(default_factory=list)
     evidence: list[str] = Field(default_factory=list)
     rca: str = ""
+    impact: list[str] = Field(default_factory=list)
     mitigation: list[str] = Field(default_factory=list)
     eta: str = "ETA_10s"
 
@@ -132,6 +133,7 @@ def validate_verdict(data: dict) -> dict:
             indicators=_as_list(d.get("indicators")),
             evidence=_as_list(d.get("evidence")),
             rca=str(d.get("rca", "")),
+            impact=_as_list(d.get("impact")),
             mitigation=_as_list(d.get("mitigation")),
             eta=str(d.get("eta", "ETA_10s")),
         ).model_dump())

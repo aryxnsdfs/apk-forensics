@@ -126,6 +126,20 @@ function StructuredJson({ data }) {
         </div>
       )}
 
+      {Array.isArray(data.impact) && data.impact.length > 0 && (
+        <div className="px-3 py-2.5 border-b border-zinc-800/70">
+          <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Potential Impact</span>
+          <ul className="flex flex-col gap-1">
+            {data.impact.slice(0, 5).map((item, index) => (
+              <li key={index} className="flex items-start gap-2 text-[11px] leading-relaxed text-zinc-300 break-words">
+                <span className="shrink-0 text-red-400/70 mt-px">•</span>
+                <span>{item}</span>
+              </li>
+            ))}
+          </ul>
+        </div>
+      )}
+
       {mitigations.length > 0 && (
         <div className="px-3 py-2.5">
           <span className="block text-[9px] text-zinc-500 uppercase tracking-widest mb-1.5">Mitigation</span>

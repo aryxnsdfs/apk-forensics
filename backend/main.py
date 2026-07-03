@@ -3221,11 +3221,23 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     )
     static_text = await _stage_llm_or_stub("DETECTIVE", _static_prompt(metadata, seed), static_stub)
     static_reqs = [c.rsplit('.', 1)[-1] for c in seed.get('code_requests', [])]
-    # Main line: short + simple. Full breakdown goes to the REASONING panel.
-    static_english = (
-        "Suspicious permission profile detected. "
-        f"Requesting code review of {', '.join(static_reqs) or 'the flagged components'}."
-    )
+    dperms = metadata.get("permissions_dangerous", [])
+    unguarded = next((c for c in metadata.get("exported_components", []) if not c.get("permission")), None)
+    # Natural-language main message.
+    if dperms:
+        static_english = (
+            "I've detected a suspicious permission combination. The app requests "
+            f"{_natural_join(dperms)} permissions."
+        )
+        if unguarded:
+            static_english += (
+                f" An exported {unguarded['type']} named {unguarded['name'].rsplit('.', 1)[-1]} "
+                "also lacks permission protection."
+            )
+        static_english += " Escalating for code analysis."
+    else:
+        static_english = ("No dangerous permission combination stands out in the manifest. "
+                          "The app looks benign so far.")
     static_think = " · ".join([
         f"Dangerous permissions: {', '.join(metadata.get('permissions_dangerous', [])) or 'none'}",
         f"Suspicious combos: {', '.join(seed.get('suspicious_combos', [])) or 'none'}",
@@ -3261,11 +3273,17 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
     rev_details = ". ".join(
         e["detail"].rstrip(". ") for e in seed.get("evidence", []) if e["flag"] in rev_flag_set
     )
-    # Main line: short verdict. Evidence detail goes to REASONING.
-    rev_english = (
-        f"Confirmed malicious behavior: {', '.join(rev_flags)}."
-        if rev_flags else "No malicious behavior confirmed in the reviewed code."
-    )
+    # Natural-language main message.
+    if rev_flags:
+        primary = rev_flags[0]
+        comp_name = (static_reqs[0] if static_reqs else "The flagged component")
+        narrative = _BEHAVIOR_NARRATIVE.get(primary, "performs operations consistent with malware")
+        rev_english = (
+            f"Confirmed. {comp_name} {narrative}. This matches our "
+            f"{_FLAG_HUMAN.get(primary, 'malware')} detection pattern ({primary})."
+        )
+    else:
+        rev_english = "Reviewed the requested code. No malicious behavior was confirmed."
     rev_think = " · ".join(filter(None, [
         f"Flags: {', '.join(rev_flags) or 'none'}",
         f"Evidence: {rev_details or 'none'}",
@@ -3291,6 +3309,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "indicators": seed.get("flags", []),
         "evidence": [e["detail"] for e in seed.get("evidence", [])],
         "rca": _build_rca_text(metadata, seed),
+        "impact": _build_impact(seed.get("flags", [])),
         "mitigation": _build_mitigation(seed.get("flags", [])),
         "eta": "ETA_10s",
     })
@@ -3299,8 +3318,23 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         f"Family: {verdict['malware_family']}. Indicators: {', '.join(verdict['indicators']) or 'none'}."
     )
     cso_text = await _stage_llm_or_stub("COMMANDER", _verdict_prompt(metadata, seed), cso_stub)
-    # english carries the authoritative verdict JSON so the UI renders its clean
-    # structured card. REASONING gets a concise summary, not messy model prose.
+    # Natural summary sentence, then the authoritative verdict JSON (UI renders both:
+    # the lead paragraph + the structured card).
+    _flags = seed.get("flags", [])
+    _level_word = verdict["threat_level"].replace("THREAT_", "").lower()
+    _caps = [_CAPABILITY[f] for f in _flags if f in _CAPABILITY]
+    if _caps:
+        cso_narrative = (
+            "Both analyses are consistent. The application appears capable of "
+            f"{_natural_join(_caps)}. While no runtime execution was observed, static evidence "
+            f"is sufficient to classify the sample as a suspected {verdict['malware_family']} "
+            f"with {_level_word} confidence."
+        )
+    else:
+        cso_narrative = (
+            "Both analyses are consistent. No malicious capability was confirmed from static "
+            f"evidence; classifying the sample as {verdict['malware_family']} with {_level_word} confidence."
+        )
     cso_think = " · ".join([
         f"Threat {verdict['threat_level'].replace('THREAT_', '')} ({verdict['threat_score']}/100)",
         f"Family {verdict['malware_family']}",
@@ -3311,7 +3345,7 @@ async def _run_apk_analysis(apk_path: str, display_name: str):
         "agent": "COMMANDER",
         "m2m": f"VERDICT | {verdict['threat_level']} | {verdict['malware_family']} | "
                f"{' '.join(verdict['indicators']) or 'NO_FLAGS'} | {verdict['eta']}",
-        "english": json.dumps(verdict),
+        "english": cso_narrative + "\n" + json.dumps(verdict),
         "think": cso_think,
         "points": 0.25,
         "reward_target": "Verdict + RCA",
@@ -3396,13 +3430,82 @@ def _guess_family(flags: list) -> str:
 
 def _build_mitigation(flags: list) -> list:
     if not flags:
-        return ["No action required — no malicious indicators found"]
-    mit = ["Uninstall the application", "Revoke the dangerous permissions"]
-    if "FLAG_C2" in flags:
-        mit.append("Block the hardcoded C2 endpoints at the network layer")
+        return ["No action required — no malicious indicators found."]
+    mit = [
+        "Uninstall the application if it is untrusted.",
+        "Revoke SMS and other dangerous permissions.",
+    ]
     if "FLAG_SMS_THEFT" in flags:
-        mit.append("Rotate any OTP-protected credentials")
+        mit.append("Rotate credentials for accounts protected by SMS-based OTP.")
+        mit.append("Monitor affected accounts for suspicious login activity.")
+    if "FLAG_CREDENTIAL_STEALING" in flags:
+        mit.append("Reset passwords for any potentially exposed accounts.")
+    if "FLAG_C2" in flags:
+        mit.append("Block the identified network endpoints at the firewall.")
     return mit
+
+
+def _natural_join(items: list) -> str:
+    items = [i for i in items if i]
+    if not items:
+        return "no"
+    if len(items) == 1:
+        return items[0]
+    if len(items) == 2:
+        return f"{items[0]} and {items[1]}"
+    return ", ".join(items[:-1]) + f", and {items[-1]}"
+
+
+# What the Reverse Engineer says a flagged component does.
+_BEHAVIOR_NARRATIVE = {
+    "FLAG_SMS_THEFT": "processes incoming SMS broadcasts and passes message content to a networking routine",
+    "FLAG_OVERLAY_ATTACK": "draws overlay windows over other apps to capture user input",
+    "FLAG_SPYWARE": "collects device data such as audio, location, or contacts for exfiltration",
+    "FLAG_CREDENTIAL_STEALING": "captures user-entered credentials and forwards them",
+    "FLAG_DROPPER": "downloads and installs a secondary payload",
+    "FLAG_C2": "communicates with a hardcoded remote server",
+}
+_FLAG_HUMAN = {
+    "FLAG_SMS_THEFT": "SMS theft", "FLAG_C2": "C2 communication",
+    "FLAG_CREDENTIAL_STEALING": "credential theft", "FLAG_OVERLAY_ATTACK": "overlay attack",
+    "FLAG_SPYWARE": "spyware", "FLAG_DROPPER": "dropper",
+    "FLAG_DEVICE_ADMIN_ABUSE": "device-admin abuse", "FLAG_EXPORTED_SURFACE": "exposed component",
+    "FLAG_OBFUSCATION": "obfuscation", "FLAG_DYNAMIC_LOADING": "dynamic code loading",
+}
+# Capability phrase used in the CSO summary sentence.
+_CAPABILITY = {
+    "FLAG_SMS_THEFT": "intercepting OTP messages and transmitting them externally",
+    "FLAG_C2": "communicating with a remote command-and-control server",
+    "FLAG_CREDENTIAL_STEALING": "stealing user credentials",
+    "FLAG_OVERLAY_ATTACK": "phishing credentials via screen overlays",
+    "FLAG_SPYWARE": "covertly surveilling the device",
+    "FLAG_DROPPER": "installing additional malware",
+}
+# Potential-impact bullets shown in the verdict card.
+_IMPACT_BULLETS = {
+    "FLAG_SMS_THEFT": [
+        "Theft of SMS-based OTP and 2FA verification codes.",
+        "Unauthorized account access through intercepted authentication messages.",
+    ],
+    "FLAG_CREDENTIAL_STEALING": ["Theft of user credentials leading to account takeover."],
+    "FLAG_C2": ["Exfiltration of sensitive data to an attacker-controlled server."],
+    "FLAG_OVERLAY_ATTACK": ["Phishing of banking or login credentials via fake overlays."],
+    "FLAG_SPYWARE": ["Covert surveillance of the device and its user."],
+    "FLAG_DROPPER": ["Installation of further malware on the device."],
+    "FLAG_DEVICE_ADMIN_ABUSE": ["Persistence and resistance to removal."],
+    "FLAG_EXPORTED_SURFACE": ["Increased exposure due to an unprotected exported component."],
+}
+
+
+def _build_impact(flags: list) -> list[str]:
+    """Ordered, de-duplicated potential-impact bullets for the given flags."""
+    out: list[str] = []
+    for flag, _ in _FLAG_IMPACT:  # _FLAG_IMPACT is severity-ordered
+        if flag in flags:
+            for bullet in _IMPACT_BULLETS.get(flag, []):
+                if bullet not in out:
+                    out.append(bullet)
+    return out
 
 
 # Plain-language impact per indicator, ordered by severity.
@@ -3432,14 +3535,18 @@ def _build_rca_text(metadata: dict, seed: dict) -> str:
     score = seed.get("threat_score", 0)
     pkg = metadata.get("package") or "The application"
 
-    impacts = [text for flag, text in _FLAG_IMPACT if flag in fset]
-    mechanism = "; ".join(e["detail"].rstrip(". ") for e in seed.get("evidence", []))
+    # Mechanism = evidence excluding the exported-surface note (called out separately).
+    mechanism = "; ".join(
+        e["detail"].rstrip(". ") for e in seed.get("evidence", [])
+        if e["flag"] != "FLAG_EXPORTED_SURFACE"
+    )
 
-    summary = f"{pkg} is classified as {family} — {level} threat ({score}/100). "
+    summary = f"{pkg} is classified as an {family} with a {level} risk score ({score}/100). "
     if mechanism:
-        summary += f"Mechanism: {mechanism}. "
-    if impacts:
-        summary += "Impact: it " + "; it ".join(impacts) + "."
+        summary += f"Static analysis found {mechanism}. "
+    if "FLAG_EXPORTED_SURFACE" in fset:
+        summary += ("Additionally, an exported component lacks permission protection, "
+                    "increasing the application's attack surface.")
     return summary.strip()
 
 
