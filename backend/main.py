@@ -3405,11 +3405,42 @@ def _build_mitigation(flags: list) -> list:
     return mit
 
 
+# Plain-language impact per indicator, ordered by severity.
+_FLAG_IMPACT = [
+    ("FLAG_SMS_THEFT", "intercepts incoming SMS to steal one-time passcodes (OTP/2FA), enabling account takeover"),
+    ("FLAG_CREDENTIAL_STEALING", "captures user credentials for account hijacking"),
+    ("FLAG_OVERLAY_ATTACK", "draws fake screens over legitimate apps to phish credentials"),
+    ("FLAG_C2", "exfiltrates stolen data to an attacker-controlled command-and-control server"),
+    ("FLAG_SPYWARE", "covertly surveils the device (audio, location, or contacts)"),
+    ("FLAG_DROPPER", "can download and install additional malware"),
+    ("FLAG_DEVICE_ADMIN_ABUSE", "abuses device-admin rights to resist removal"),
+    ("FLAG_DYNAMIC_LOADING", "loads hidden code at runtime to evade static analysis"),
+    ("FLAG_OBFUSCATION", "obfuscates its payload to hinder analysis"),
+    ("FLAG_EXPORTED_SURFACE", "exposes unguarded components that widen the attack surface"),
+]
+
+
 def _build_rca_text(metadata: dict, seed: dict) -> str:
-    if not seed.get("flags"):
-        return "No malicious permission/behavior combination detected. Treated as benign."
-    parts = [e["detail"].rstrip(". ") for e in seed.get("evidence", [])]
-    return ("Root cause: " + ". ".join(parts) + ".") if parts else "Suspicious permission profile detected."
+    """Human-readable threat summary for the Root Cause section."""
+    flags = seed.get("flags", [])
+    if not flags:
+        return "No malicious permission or behavior combination was detected. The application appears benign."
+
+    fset = set(flags)
+    family = _guess_family(flags)
+    level = str(seed.get("threat_level", "")).replace("THREAT_", "").title() or "Elevated"
+    score = seed.get("threat_score", 0)
+    pkg = metadata.get("package") or "The application"
+
+    impacts = [text for flag, text in _FLAG_IMPACT if flag in fset]
+    mechanism = "; ".join(e["detail"].rstrip(". ") for e in seed.get("evidence", []))
+
+    summary = f"{pkg} is classified as {family} — {level} threat ({score}/100). "
+    if mechanism:
+        summary += f"Mechanism: {mechanism}. "
+    if impacts:
+        summary += "Impact: it " + "; it ".join(impacts) + "."
+    return summary.strip()
 
 
 @app.post("/api/analyze")
